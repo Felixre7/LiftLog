@@ -10,8 +10,11 @@ import { useState } from 'react';
 /**
  * Opens a session as the workout in progress, asking first when that would discard a different
  * unfinished one. Returns the dialog to render alongside whatever triggers `start`.
+ *
+ * `onStarted` runs once the session is going ahead, before its screen is opened - after the prompt is
+ * confirmed, not when it is raised.
  */
-export function useStartWorkoutWithConfirmation() {
+export function useStartWorkoutWithConfirmation({ onStarted }: { onStarted?: (session: Session) => void } = {}) {
   const { t } = useTranslate();
   const { push } = useRouter();
   const activeSession = useAppSelector(selectActiveSession);
@@ -22,6 +25,7 @@ export function useStartWorkoutWithConfirmation() {
     if (activeSession?.id !== session.id) {
       startWorkout(session);
     }
+    onStarted?.(session);
     push('/(tabs)/(session)/session', { withAnchor: true });
   };
 

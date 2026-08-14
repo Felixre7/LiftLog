@@ -8,13 +8,16 @@ import { Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Jiggler } from '@/components/presentation/foundation/jiggler';
 import IconButton from '@/components/presentation/foundation/icon-button';
+import { MenuItem } from '@/components/presentation/foundation/menu';
 
 export default function SessionMoreMenuComponent(props: {
   session: Session;
   isActiveWorkout?: boolean;
   save: () => void;
+  /** Actions the screen adds below the ones every session has. */
+  additionalItems?: MenuItem[];
 }) {
-  const { save, session, isActiveWorkout } = props;
+  const { save, session, isActiveWorkout, additionalItems } = props;
   const { push } = useRouter();
   const { t } = useTranslate();
 
@@ -42,6 +45,7 @@ export default function SessionMoreMenuComponent(props: {
           systemImage: 'pencil',
           onPress: handleEditWorkout,
         },
+        ...(additionalItems ?? []),
       ]}
     />
   );

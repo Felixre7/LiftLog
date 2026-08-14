@@ -10,6 +10,9 @@ import { View } from 'react-native';
 import { DatePickerInput } from 'react-native-paper-dates';
 import { useDispatch } from 'react-redux';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
+import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
+import { useTranslate } from '@tolgee/react';
+import { useRef } from 'react';
 
 export default function HistoryEditPage() {
   const dispatch = useDispatch();
@@ -18,7 +21,20 @@ export default function HistoryEditPage() {
   const { dismissTo, push } = useRouter();
   const finishWorkout = useFinishWorkout(sessionId);
 
-  useOnDismiss(() => dispatch(sessionFinished(sessionId)));
+  // Resuming hands the session back to the workout in progress, so leaving this screen must not also
+  // finish it - that would immediately clear it as the active workout again.
+  const resumed = useRef(false);
+  useOnDismiss(() => {
+    if (!resumed.current) {
+      dispatch(sessionFinished(sessionId));
+    }
+  });
+  const { start: resume, confirmationDialog } = useStartWorkoutWithConfirmation({
+    onStarted: () => {
+      resumed.current = true;
+      dismissTo('/history');
+    },
+  });
 
   const save = () => {
     const hasDiff = finishWorkout();
@@ -28,6 +44,7 @@ export default function HistoryEditPage() {
     }
   };
   const showBodyweight = useAppSelector((x) => x.settings.showBodyweight);
+  const { t } = useTranslate();
 
   // The row is gone if it was deleted from under this screen.
   if (!session) {
@@ -43,7 +60,19 @@ export default function HistoryEditPage() {
           title: session.blueprint.name,
         }}
       />
-      <SessionMoreMenuComponent session={session} save={save} />
+      <SessionMoreMenuComponent
+        session={session}
+        save={save}
+        additionalItems={[
+          {
+            label: t('workout.resume.button'),
+            icon: 'playCircle',
+            systemImage: 'play.circle',
+            onPress: () => resume(session),
+          },
+        ]}
+      />
+      {confirmationDialog}
       <SessionComponent
         session={session}
         updateSession={(update) => dispatch(updateStoredSession({ sessionId, update }))}
