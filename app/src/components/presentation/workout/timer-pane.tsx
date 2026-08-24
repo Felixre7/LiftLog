@@ -148,6 +148,7 @@ function ProgressBar({ segments, colors, trackColor }: ProgressBarProps) {
       {segments.map((segment, index) => (
         <View key={index} style={{ flex: segment.flex, backgroundColor: colors[segment.color] }} />
       ))}
+      {/* This thing is the background which covers the real progress, it scales down over time */}
       <Animated.View
         style={{
           position: 'absolute',
@@ -160,22 +161,27 @@ function ProgressBar({ segments, colors, trackColor }: ProgressBarProps) {
           transformOrigin: 'right',
         }}
       />
+      {/* Now we create a pip at each spot by making a container which is the width of the segment (segment.flex)
+        The pip itself is just an absolutely positioned item with a colour and a width
+      */}
       <View
         style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, flexDirection: 'row' }}
         pointerEvents="none"
       >
         {segments.map((segment, index) => (
           <View key={index} style={{ flex: segment.flex }}>
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                right: 0,
-                width: pipWidth,
-                backgroundColor: colors.surfaceContainerHigh,
-              }}
-            />
+            {index === segments.length - 1 ? undefined : (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  bottom: 0,
+                  right: 0,
+                  width: pipWidth,
+                  backgroundColor: colors.surfaceContainerHigh,
+                }}
+              />
+            )}
           </View>
         ))}
       </View>

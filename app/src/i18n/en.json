@@ -382,7 +382,7 @@
   "rest_timer.pause": "Pause rest timer",
   "rest_timer.restart": "Restart rest timer",
   "rest_timer.resume": "Resume rest timer",
-  "rest_timer.status.over": "Overdue",
+  "rest_timer.status.over": "Rested",
   "rest_timer.status.paused": "Paused",
   "rest_timer.status.ready": "Ready",
   "rest_timer.status.resting": "Resting",
