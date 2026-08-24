@@ -4,6 +4,7 @@ using LiftLog.Api.Authentication;
 using LiftLog.Api.Db;
 using LiftLog.Api.Hubs;
 using LiftLog.Api.Service;
+using LiftLog.Api.Service.Backup;
 using LiftLog.Api.Validators;
 using LiftLog.Lib.Serialization;
 using Microsoft.EntityFrameworkCore;
@@ -50,7 +51,14 @@ builder
     .Services.AddAuthentication(PurchaseTokenAuthenticationSchemeOptions.SchemeName)
     .AddScheme<PurchaseTokenAuthenticationSchemeOptions, PurchaseTokenAuthenticationHandler>(
         PurchaseTokenAuthenticationSchemeOptions.SchemeName,
-        options => { }
+        _ => { }
+    )
+    .AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
+        ApiKeyAuthenticationSchemeOptions.SchemeName,
+        options =>
+        {
+            options.ApiKey = builder.Configuration.GetValue<string>(BackupConfiguration.ApiKeyPath);
+        }
     );
 
 builder.Services.AddAuthorization();
@@ -60,6 +68,7 @@ builder.Services.AddScoped<RateLimitService>();
 
 builder.Services.AddHostedService<CleanupExpiredDataHostedService>();
 
+builder.AddBackupSink();
 builder.Services.AddScoped<PurchaseVerificationService>();
 builder.Services.AddAnthropicWorkoutPlanner();
 builder.Services.AddAnthropicWorkoutPlannerV2();
@@ -111,5 +120,12 @@ if (!app.Configuration.GetValue<bool>("SkipDatabaseMigrations"))
     var rateLimitDb = scope.ServiceProvider.GetRequiredService<RateLimitContext>();
     await rateLimitDb.Database.MigrateAsync();
 }
+
+var backupSink = app.Services.GetService<IBackupSink>();
+
+app.Logger.LogInformation(
+    "Registered backup sink {BackupSink}",
+    backupSink?.GetType().Name ?? "NONE"
+);
 
 app.Run();

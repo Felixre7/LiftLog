@@ -55,6 +55,50 @@ Here is an example configuration that works with the Docker Compose setup:
 
 **Note:** The `RevenueCatApiKey` can be omitted if a `WebAuthApiKey` is provided. It is used only for validating in-app purchases for the AI planner.
 
+### Backups
+
+All backup configuration lives under the `Backup` section. The `/backup` endpoint accepts a backup
+body authenticated with `Backup:ApiKey`, and stores it through a sink chosen by `Backup:Sink`.
+The chosen sink is configured by `Backup:SinkOptions`. No sink is configured by default, and the
+endpoint returns 422 until one is.
+
+Writing to a directory on disk:
+
+```json
+{
+  "Backup": {
+    "Sink": "File",
+    "ApiKey": "some-long-random-key",
+    "SinkOptions": {
+      "BackupDirectory": "/srv/liftlog-backups"
+    }
+  }
+}
+```
+
+Writing to S3 (or an S3 compatible service such as Cloudflare R2 or MinIO):
+
+```json
+{
+  "Backup": {
+    "Sink": "S3",
+    "ApiKey": "some-long-random-key",
+    "SinkOptions": {
+      "BucketName": "liftlog-backups",
+      "KeyPrefix": "prod",
+      "Region": "ap-southeast-2"
+    }
+  }
+}
+```
+
+Backups are stored as `{KeyPrefix}/{authenticated name}/{timestamp}.liftlogbackup.gz`.
+
+`Region` is required unless `ServiceUrl` points at an S3 compatible endpoint, in which case it becomes
+the signing region. Set `ForcePathStyle` to `true` for services that do not support virtual host style
+buckets. Credentials come from the ambient AWS chain (environment variables, profile, instance role)
+unless `AccessKeyId` and `SecretAccessKey` are both set.
+
 ### Running the Backend
 
 Start the PostgreSQL database and run the backend:
@@ -66,6 +110,18 @@ dotnet run
 ```
 
 The backend should now be running at `http://localhost:5264`!
+
+### Running the Tests
+
+The API tests need PostgreSQL and a LocalStack S3 endpoint, both provided by the compose file in
+[tests](../tests/docker-compose.yml):
+
+```bash
+cd ./tests
+docker compose up -d
+cd ./LiftLog.Tests.Api
+dotnet run
+```
 
 ### Connecting the Development App
 
