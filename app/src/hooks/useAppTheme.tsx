@@ -125,6 +125,8 @@ export type AppThemeColors = Material3Scheme &
     onAmber: string;
 
     seedColor: string | undefined;
+
+    scheme: 'dark' | 'light' | undefined;
   };
 
 export type ColorChoice = keyof {
@@ -215,6 +217,7 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
       ...colorPair('amber', 'ffffc107', schemedTheme.primary, isDark),
       ...activityRamp(schemedTheme.primary, isDark),
       seedColor: seedColor,
+      scheme: colorScheme,
     } satisfies AppThemeColors,
     colorScheme,
   };
