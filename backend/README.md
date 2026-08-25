@@ -1,6 +1,6 @@
 ## LiftLog Backend
 
-The LiftLog backend is written in C# on the latest .NET. The backend is responsible for storing and serving user feeds (which are end-to-end encrypted) and serving the AI planner. It requires a PostgreSQL database.
+The LiftLog backend is written in C# on the latest .NET. The backend is responsible for storing and serving user feeds (which are end-to-end encrypted) and serving the AI planner. It stores data in either **PostgreSQL** or **SQLite**, selected by configuration.
 
 ### Prerequisites
 
@@ -27,9 +27,16 @@ chmod +x ./dotnet-install.sh
 
 For other Linux distributions, see the [official installation guide](https://learn.microsoft.com/en-us/dotnet/core/install/linux).
 
-#### PostgreSQL Database
+#### A database
 
-Optionally, to run a local PostgreSQL instance, use the provided Docker Compose file (requires Docker installed).
+The backend supports two providers, chosen with `Database:Provider`:
+
+| Provider             | When to use it                                                           |
+| -------------------- | ------------------------------------------------------------------------ |
+| `Postgres` (default) | When you expect more than a few users                                    |
+| `Sqlite`             | Self-hosting a single instance. No database server to run - just a file. |
+
+For Postgres, a local instance is available from the provided Docker Compose file. For SQLite there is nothing to install - the schema is created on first boot.
 
 ### Configuration
 
@@ -39,9 +46,9 @@ Here is an example configuration that works with the Docker Compose setup:
 
 ```json
 {
-  "ConnectionStrings": {
-    "UserDataContext": "Host=localhost;Port=5400;Database=liftlog;Username=postgres;Password=password",
-    "RateLimitContext": "Host=localhost;Port=5400;Database=liftlog;Username=postgres;Password=password"
+  "Database": {
+    "Provider": "Postgres",
+    "ConnectionString": "Host=localhost;Port=5400;Database=liftlog;Username=postgres;Password=password"
   },
   "AnthropicApiKey": "sk-test-key",
   "WebAuthApiKey": "test-web-auth-key-12345",
@@ -50,6 +57,17 @@ Here is an example configuration that works with the Docker Compose setup:
   "RevenueCatApiKey": "test-key",
   "RevenueCatProjectId": "test-project",
   "RevenueCatProEntitlementId": "pro"
+}
+```
+
+To run against SQLite instead, replace the `Database` section with a file path:
+
+```json
+{
+  "Database": {
+    "Provider": "Sqlite",
+    "ConnectionString": "Data Source=/var/lib/liftlog/liftlog.db"
+  }
 }
 ```
 
@@ -109,6 +127,15 @@ docker compose up -d
 dotnet run
 ```
 
+Or, with no database server at all:
+
+```bash
+cd ./backend/LiftLog.Api
+Database__Provider=Sqlite Database__ConnectionString="Data Source=liftlog.db" dotnet run
+```
+
+Either way the schema is migrated on startup (set `SkipDatabaseMigrations` to opt out).
+
 The backend should now be running at `http://localhost:5264`!
 
 ### Running the Tests
@@ -121,6 +148,29 @@ cd ./tests
 docker compose up -d
 cd ./LiftLog.Tests.Api
 dotnet run
+```
+
+Controller tests run against **both** providers from a single set of tests. A test class takes an
+`ApiFactory` and declares one `[ClassDataSource]` per provider, so TUnit runs every test twice - once
+on Postgres, once on a throwaway SQLite file:
+
+```csharp
+[ClassDataSource<PostgresApiFactory>(Shared = SharedType.PerClass)]
+[ClassDataSource<SqliteApiFactory>(Shared = SharedType.PerClass)]
+public class EventsControllerTests(ApiFactory factory) { ... }
+```
+
+Write new database-backed tests this way rather than against a provider directly.
+
+Tests boot the API in the `Test` environment, not `Development`, so the `appsettings.Development.json`
+you keep for local runs never selects the database out from under them. Every host is configured from
+`tests/LiftLog.Tests.Api/appsettings.json` plus whatever the test itself overrides.
+
+A few tests call the real Anthropic API and are skipped by default, since a live model is neither
+deterministic nor free. To include them:
+
+```bash
+LIFTLOG_LIVE_AI_TESTS=true dotnet run
 ```
 
 ### Connecting the Development App

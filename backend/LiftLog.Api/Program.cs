@@ -8,7 +8,6 @@ using LiftLog.Api.Service.Backup;
 using LiftLog.Api.Validators;
 using LiftLog.Lib.Serialization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Migrations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,18 +17,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<CreateUserRequestValidator>
 
 // Add services to the container.
 
-builder.Services.AddDbContext<UserDataContext>(options =>
-    options
-        .UseNpgsql(builder.Configuration.GetConnectionString("UserDataContext"))
-        .ReplaceService<IHistoryRepository, CamelCaseHistoryContext>()
-        .UseSnakeCaseNamingConvention()
-);
-builder.Services.AddDbContext<RateLimitContext>(options =>
-    options
-        .UseNpgsql(builder.Configuration.GetConnectionString("RateLimitContext"))
-        .ReplaceService<IHistoryRepository, CamelCaseHistoryContext>()
-        .UseSnakeCaseNamingConvention()
-);
+builder.Services.AddLiftLogDbContexts(builder.Configuration);
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -74,6 +62,7 @@ builder.Services.AddAnthropicWorkoutPlanner();
 builder.Services.AddAnthropicWorkoutPlannerV2();
 builder.Services.AddWebAuthPurchaseVerification();
 builder.Services.AddRevenueCatPurchaseVerification();
+builder.Services.AddHostedService<ConfigurationLogger>();
 
 builder
     .Services.AddControllers()
@@ -120,12 +109,5 @@ if (!app.Configuration.GetValue<bool>("SkipDatabaseMigrations"))
     var rateLimitDb = scope.ServiceProvider.GetRequiredService<RateLimitContext>();
     await rateLimitDb.Database.MigrateAsync();
 }
-
-var backupSink = app.Services.GetService<IBackupSink>();
-
-app.Logger.LogInformation(
-    "Registered backup sink {BackupSink}",
-    backupSink?.GetType().Name ?? "NONE"
-);
 
 app.Run();

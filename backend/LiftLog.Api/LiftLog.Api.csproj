@@ -31,8 +31,12 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.AI" Version="10.4.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
+    <!-- Transitive via Microsoft.EntityFrameworkCore.Sqlite, which pulls 2.1.11. Pinned here only
+         to lift SQLitePCLRaw.lib.e_sqlite3 past GHSA-2m69-gcr7-jv3q (vulnerable <= 2.1.11). -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
   </ItemGroup>
   <ItemGroup>
     <None Update="AiWorkoutPlan.json">

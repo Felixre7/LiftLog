@@ -232,6 +232,7 @@ public class AuthenticationIntegrationTests
     }
 
     [Test]
+    [RequiresAnthropicApiKey]
     public async Task AiChatHub_CanSendAndReceiveMessages_WithValidAuth()
     {
         // Arrange

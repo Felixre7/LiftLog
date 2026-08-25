@@ -7,6 +7,12 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace LiftLog.Tests.Api.Integration;
 
+/// <summary>
+/// Smoke tests against the live Anthropic API. <see cref="AiWorkoutPlannerV2IntegrationTests" />
+/// covers the same hub path deterministically with the streaming seam faked.
+/// </summary>
+[Category("RequiresAnthropicApiKey")]
+[RequiresAnthropicApiKey]
 [ClassDataSource<WebApplicationFactory<Program>>(Shared = SharedType.PerClass)]
 public class AiWorkoutPlannerIntegrationTests
 {
@@ -51,7 +57,6 @@ public class AiWorkoutPlannerIntegrationTests
 
     [Test]
     [Category("Integration")]
-    [Category("RequiresAnthropicApiKey")]
     public async Task SendMessage_WithSimplePlanRequest_ReturnsWorkoutPlan()
     {
         // Arrange
@@ -83,7 +88,6 @@ public class AiWorkoutPlannerIntegrationTests
 
     [Test]
     [Category("Integration")]
-    [Category("RequiresAnthropicApiKey")]
     public async Task SendMessage_WithDetailedPlanRequest_ReturnsCorrectExerciseStructure()
     {
         // Arrange
@@ -129,7 +133,6 @@ public class AiWorkoutPlannerIntegrationTests
 
     [Test]
     [Category("Integration")]
-    [Category("RequiresAnthropicApiKey")]
     public async Task Introduce_ReturnsMessageResponse()
     {
         // Arrange
@@ -150,7 +153,6 @@ public class AiWorkoutPlannerIntegrationTests
 
     [Test]
     [Category("Integration")]
-    [Category("RequiresAnthropicApiKey")]
     public async Task SendMessage_WithMultiSessionPlanRequest_ReturnsMultipleSessions()
     {
         // Arrange
@@ -184,7 +186,6 @@ public class AiWorkoutPlannerIntegrationTests
 
     [Test]
     [Category("Integration")]
-    [Category("RequiresAnthropicApiKey")]
     public async Task SendMessage_AfterRestartChat_StartsNewConversation()
     {
         // Arrange
@@ -218,7 +219,6 @@ public class AiWorkoutPlannerIntegrationTests
 
     [Test]
     [Category("Integration")]
-    [Category("RequiresAnthropicApiKey")]
     public async Task SendMessage_WithNonEnglishLocale_RespondsInRequestedLanguage()
     {
         // Arrange
@@ -239,7 +239,6 @@ public class AiWorkoutPlannerIntegrationTests
 
     [Test]
     [Category("Integration")]
-    [Category("RequiresAnthropicApiKey")]
     public async Task SendMessage_StreamsIntermediateUpdates()
     {
         // Arrange
