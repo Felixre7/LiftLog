@@ -38,22 +38,11 @@ builder.Services.AddSignalR(s =>
     s.HandshakeTimeout = TimeSpan.FromSeconds(60);
 });
 
-// Add Authentication
 builder
     .Services.AddAuthentication(PurchaseTokenAuthenticationSchemeOptions.SchemeName)
-    .AddScheme<PurchaseTokenAuthenticationSchemeOptions, PurchaseTokenAuthenticationHandler>(
-        PurchaseTokenAuthenticationSchemeOptions.SchemeName,
-        _ => { }
-    )
-    .AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
-        ApiKeyAuthenticationSchemeOptions.SchemeName,
-        options =>
-        {
-            options.ApiKey = builder.Configuration.GetValue<string>(
-                AuthConfiguration.ApiKey.ValuePath
-            );
-        }
-    );
+    .AddPurchaseToken()
+    .AddApiKey()
+    .AddForwardAuth();
 
 builder.Services.AddAuthorization();
 
@@ -61,13 +50,11 @@ builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddScoped<RateLimitService>();
 
 builder.Services.AddHostedService<CleanupExpiredDataHostedService>();
+builder.Services.AddHostedService<ConfigurationLogger>();
 
 builder.AddBackupSink();
-builder.Services.AddScoped<PurchaseVerificationService>();
 builder.Services.AddAnthropicWorkoutPlanner();
 builder.Services.AddAnthropicWorkoutPlannerV2();
-builder.Services.AddRevenueCatPurchaseVerification();
-builder.Services.AddHostedService<ConfigurationLogger>();
 
 builder
     .Services.AddControllers()

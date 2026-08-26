@@ -12,7 +12,7 @@ namespace LiftLog.Api.Controllers;
 [FeatureCheck(Feature.Backup)]
 public class BackupController(IBackupSink? backupSink = null) : ControllerBase
 {
-    [Authorize(AuthenticationSchemes = ApiKeyAuthenticationSchemeOptions.SchemeName)]
+    [Authorize(AuthenticationSchemes = AuthSchemes.Backup)]
     [HttpPost]
     public async Task<IResult> Post()
     {

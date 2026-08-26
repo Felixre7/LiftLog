@@ -75,11 +75,12 @@ Nothing to configure. It works as soon as the server is running. See [FeedProces
 
 | Method                | Header                                     | Accepted by           |
 | --------------------- | ------------------------------------------ | --------------------- |
-| `Auth__ApiKey__Value` | `X-API-Key: <value>`                       | `/backup`, AI planner |
+| `Auth__ApiKey`        | `X-API-Key: <value>`                       | `/backup`, AI planner |
+| `Auth__ForwardAuth`   | whatever `UserHeader` names                | `/backup`, AI planner |
 | `Auth__PurchaseToken` | `Authorization: Bearer RevenueCat <token>` | AI planner            |
 
 `Auth__PurchaseToken` verifies App Store / Play Store purchases through RevenueCat, which a
-self-hosted deployment has no way to issue - so **`Auth__ApiKey__Value` is the one you want**:
+self-hosted deployment has no way to issue - so **a shared API key is the one you want**:
 
 ```yaml
 Auth__ApiKey__Value: some-long-random-key
@@ -87,6 +88,21 @@ Auth__ApiKey__Value: some-long-random-key
 
 A method with no configuration never authenticates anyone. With no API key set, every request to
 `/backup` is rejected with 401.
+
+#### Forward auth
+
+If you already run a single sign-on proxy - Authelia, Authentik, oauth2-proxy, Caddy `forward_auth`,
+Traefik `ForwardAuth` - it can authenticate people for you and pass the username along in a header:
+
+```yaml
+Auth__ForwardAuth__UserHeader: Remote-User
+Auth__ForwardAuth__TrustedProxies: "10.0.0.0/8"
+```
+
+Unlike the shared API key this carries a real identity, so each person's backups land in their own
+folder rather than a shared `default` one.
+
+Leaving `UserHeader` unset disables the whole scheme.
 
 ### Remote backup
 
@@ -175,19 +191,21 @@ There is no migration path between the two providers - pick one before you have 
 Configuration uses standard ASP.NET Core binding, so any `Section:Key` from the
 [backend README](../backend/README.md) becomes `Section__Key` as an environment variable.
 
-| Variable                      | Default             | What it does                                  |
-| ----------------------------- | ------------------- | --------------------------------------------- |
-| `Feed__Enabled`               | `true`              | `false` makes the feed endpoints return 423.  |
-| `Sharing__Enabled`            | `true`              | `false` makes the share endpoints return 423. |
-| `Backup__Enabled`             | `true`              | `false` makes `/backup` return 423.           |
-| `AiPlanner__Enabled`          | `true`              | `false` makes the AI chat routes return 423.  |
-| `Database__Provider`          | `Postgres`          | `Sqlite` or `Postgres`.                       |
-| `Database__ConnectionString`  | none (required)     | Connection string for the chosen provider.    |
-| `SkipDatabaseMigrations`      | `false`             | Set `true` to apply migrations yourself.      |
-| `Auth__ApiKey__Value`         | none                | Value the app must send as `X-API-Key`.       |
-| `Backup__Sink`                | none                | `File` or `S3`.                               |
-| `AiPlanner__AnthropicApiKey`  | none                | Anthropic key the planner calls with.         |
-| `AiPlanner__AnthropicModelId` | `claude-sonnet-4-6` | Overrides the model.                          |
+| Variable                            | Default             | What it does                                  |
+| ----------------------------------- | ------------------- | --------------------------------------------- |
+| `Feed__Enabled`                     | `true`              | `false` makes the feed endpoints return 423.  |
+| `Sharing__Enabled`                  | `true`              | `false` makes the share endpoints return 423. |
+| `Backup__Enabled`                   | `true`              | `false` makes `/backup` return 423.           |
+| `AiPlanner__Enabled`                | `true`              | `false` makes the AI chat routes return 423.  |
+| `Database__Provider`                | `Postgres`          | `Sqlite` or `Postgres`.                       |
+| `Database__ConnectionString`        | none (required)     | Connection string for the chosen provider.    |
+| `SkipDatabaseMigrations`            | `false`             | Set `true` to apply migrations yourself.      |
+| `Auth__ApiKey__Value`               | none                | Value the app must send as `X-API-Key`.       |
+| `Auth__ForwardAuth__UserHeader`     | none                | Proxy header holding the username.            |
+| `Auth__ForwardAuth__TrustedProxies` | none                | CIDRs the identity header is accepted from.   |
+| `Backup__Sink`                      | none                | `File` or `S3`.                               |
+| `AiPlanner__AnthropicApiKey`        | none                | Anthropic key the planner calls with.         |
+| `AiPlanner__AnthropicModelId`       | `claude-sonnet-4-6` | Overrides the model.                          |
 
 The container listens on port `8080`, runs as a non-root user, and uses `/var/lib/liftlog` as its
 data directory. Health check: `GET /health`.

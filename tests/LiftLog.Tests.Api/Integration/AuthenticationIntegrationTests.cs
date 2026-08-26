@@ -17,6 +17,7 @@ public class AuthenticationIntegrationTests
 {
     private readonly WebApplicationFactory<Program> _factory;
     private const string TestApiKey = "test-api-key-12345";
+    private const string TestUserHeader = "Remote-User";
     private const string TestRevenueCatUserId = "test-user-with-pro";
 
     public AuthenticationIntegrationTests(WebApplicationFactory<Program> factory)
@@ -51,6 +52,7 @@ public class AuthenticationIntegrationTests
             extraConfiguration: new Dictionary<string, string?>
             {
                 [AuthConfiguration.ApiKey.ValuePath] = TestApiKey,
+                [AuthConfiguration.ForwardAuth.UserHeaderPath] = TestUserHeader,
             }
         );
     }
@@ -79,6 +81,33 @@ public class AuthenticationIntegrationTests
                 receivedMessages.Add(message);
             }
         );
+
+        // Act
+        await hubConnection.StartAsync();
+
+        // Assert
+        await Assert.That(hubConnection.State).IsEqualTo(HubConnectionState.Connected);
+
+        // Cleanup
+        await hubConnection.StopAsync();
+        await hubConnection.DisposeAsync();
+    }
+
+    [Test]
+    public async Task AiChatHub_WithForwardedUser_ShouldConnect()
+    {
+        // Arrange
+        var server = _factory.Server;
+        var hubConnection = new HubConnectionBuilder()
+            .WithUrl(
+                $"{server.BaseAddress}ai-chat",
+                options =>
+                {
+                    options.HttpMessageHandlerFactory = _ => server.CreateHandler();
+                    options.Headers.Add(TestUserHeader, "alice");
+                }
+            )
+            .Build();
 
         // Act
         await hubConnection.StartAsync();

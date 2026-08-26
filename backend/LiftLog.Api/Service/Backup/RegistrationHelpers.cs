@@ -23,7 +23,7 @@ public static class RegistrationHelpers
             case "File":
                 services
                     .AddOptions<FileStorageBackupSinkOptions>()
-                    .Bind(configuration.GetSection(BackupConfiguration.SinkOptionsPath))
+                    .BindConfiguration(BackupConfiguration.SinkOptionsPath)
                     .ValidateDataAnnotations()
                     .ValidateOnStart();
                 services.AddSingleton<IBackupSink, FileStorageBackupSink>();
@@ -31,7 +31,7 @@ public static class RegistrationHelpers
             case "S3":
                 services
                     .AddOptions<S3BackupSinkOptions>()
-                    .Bind(configuration.GetSection(BackupConfiguration.SinkOptionsPath))
+                    .BindConfiguration(BackupConfiguration.SinkOptionsPath)
                     .ValidateDataAnnotations()
                     .ValidateOnStart();
                 services.AddSingleton<IAmazonS3>(sp =>

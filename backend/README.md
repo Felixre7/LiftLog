@@ -88,16 +88,21 @@ used only for validating in-app purchases, which a self-hosted deployment has no
 All authentication configuration lives under the `Auth` section. Each subsection is one way a caller
 can prove who it is, and endpoints choose which of them they accept:
 
-| Method                | Header                                     | Configured by         | Accepted by            |
-| --------------------- | ------------------------------------------ | --------------------- | ---------------------- |
-| `Auth:ApiKey`         | `X-API-Key: <value>`                       | `Value`               | `/backup`, AI planner  |
-| `Auth:PurchaseToken`  | `Authorization: Bearer RevenueCat <token>` | `RevenueCat*` options | AI planner             |
+| Method               | Header                                     | Configured by         | Accepted by           |
+| -------------------- | ------------------------------------------ | --------------------- | --------------------- |
+| `Auth:ApiKey`        | `X-API-Key: <value>`                       | `Value`               | `/backup`, AI planner |
+| `Auth:ForwardAuth`   | whichever header `UserHeader` names        | `UserHeader`          | `/backup`, AI planner |
+| `Auth:PurchaseToken` | `Authorization: Bearer RevenueCat <token>` | `RevenueCat*` options | AI planner            |
 
 ```json
 {
   "Auth": {
     "ApiKey": {
       "Value": "some-long-random-key"
+    },
+    "ForwardAuth": {
+      "UserHeader": "Remote-User",
+      "TrustedProxies": "10.0.0.0/8"
     },
     "PurchaseToken": {
       "RevenueCatApiKey": "sk-...",
@@ -111,6 +116,18 @@ can prove who it is, and endpoints choose which of them they accept:
 A method with no configuration never authenticates anyone, so leaving `Auth:ApiKey:Value` unset
 means every `/backup` request is rejected with 401. An endpoint that accepts more than one method
 succeeds as soon as any of them does.
+
+#### Forward auth
+
+`Auth:ForwardAuth` trusts a header set by a reverse proxy that has already authenticated the caller
+
+- the pattern Authelia, Authentik, oauth2-proxy, Caddy `forward_auth` and Traefik `ForwardAuth` all
+  implement. `UserHeader` names the header carrying the username (`Remote-User` is the usual choice);
+  leaving it unset disables forward auth.
+
+The header is only as trustworthy as the network path in front of it: anything that can reach the
+server directly can set it. `TrustedProxies` is a comma separated list of CIDR ranges that the
+connecting peer must fall inside, checked against the immediate peer.
 
 ### Features
 
@@ -135,7 +152,7 @@ authenticated against a feed account, so sharing cannot work without user endpoi
 ### Backups
 
 All backup configuration lives under the `Backup` section. The `/backup` endpoint accepts a backup
-body authenticated with `Auth:ApiKey:Value`, and stores it through a sink chosen by `Backup:Sink`.
+body, and stores it through a sink chosen by `Backup:Sink`.
 The chosen sink is configured by `Backup:SinkOptions`. No sink is configured by default, and the
 endpoint returns 422 until one is.
 
@@ -170,8 +187,7 @@ Writing to S3 (or an S3 compatible service such as Cloudflare R2 or MinIO):
 Backups are stored as `{KeyPrefix}/{authenticated name}/{timestamp}.liftlogbackup.gz`.
 
 `Region` is required unless `ServiceUrl` points at an S3 compatible endpoint, in which case it becomes
-the signing region. Set `ForcePathStyle` to `true` for services that do not support virtual host style
-buckets. Credentials come from the ambient AWS chain (environment variables, profile, instance role)
+the signing region. Credentials come from the ambient AWS chain (environment variables, profile, instance role)
 unless `AccessKeyId` and `SecretAccessKey` are both set.
 
 ### Running the Backend

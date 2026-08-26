@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -6,6 +5,7 @@ using LiftLog.Api.Service;
 using LiftLog.Lib.Models;
 using LiftLog.Lib.Serialization;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace LiftLog.Api.Authentication;
@@ -68,6 +68,9 @@ public class ApiKeyAuthenticationSchemeOptions : AuthenticationSchemeOptions
 {
     public const string SchemeName = "ApiKey";
 
-    [Required]
+    /// <summary>
+    /// Shared secret callers present as X-API-Key. Unset leaves the scheme inert.
+    /// </summary>
+    [ConfigurationKeyName("Value")]
     public string? ApiKey { get; set; }
 }
