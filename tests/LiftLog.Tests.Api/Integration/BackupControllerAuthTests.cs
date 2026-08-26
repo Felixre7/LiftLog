@@ -41,7 +41,10 @@ internal static class BackupTestFactory
                 builder.ConfigureAppConfiguration(
                     (_, config) =>
                         config.AddInMemoryCollection(
-                            new Dictionary<string, string?> { ["Backup:ApiKey"] = backupApiKey }
+                            new Dictionary<string, string?>
+                            {
+                                [AuthConfiguration.ApiKey.ValuePath] = backupApiKey,
+                            }
                         )
                 )
             );

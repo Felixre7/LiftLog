@@ -17,7 +17,7 @@ services:
       Database__Provider: Sqlite
       Database__ConnectionString: "Data Source=/var/lib/liftlog/liftlog.db"
       AiPlanner__AnthropicApiKey: ${ANTHROPIC_API_KEY:-}
-      AiPlanner__ApiKey: ${WEB_AUTH_API_KEY:-test-web-auth-key-12345}
+      Auth__ApiKey__Value: ${LIFTLOG_API_KEY:-test-web-auth-key-12345}
     volumes:
       - liftlog_data:/var/lib/liftlog
     restart: unless-stopped

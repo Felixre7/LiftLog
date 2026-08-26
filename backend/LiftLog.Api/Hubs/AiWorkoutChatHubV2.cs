@@ -12,7 +12,10 @@ public interface IChatClientV2
     Task ReceiveMessage(AiChatResponseV2 message);
 }
 
-[Authorize(AuthenticationSchemes = PurchaseTokenAuthenticationSchemeOptions.SchemeName)]
+[Authorize(
+    AuthenticationSchemes = $"{PurchaseTokenAuthenticationSchemeOptions.SchemeName},"
+        + ApiKeyAuthenticationSchemeOptions.SchemeName
+)]
 [FeatureCheck(Feature.AiPlanner)]
 public class AiWorkoutChatHubV2(IAiChatDirectoryV2 chatDirectory, AiPlanToolProvider toolProvider)
     : Hub<IChatClientV2>

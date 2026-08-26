@@ -51,14 +51,20 @@ Here is an example configuration for running from source against the Postgres Co
     "Provider": "Postgres",
     "ConnectionString": "Host=localhost;Port=5400;Database=liftlog;Username=postgres;Password=password"
   },
-  "AiPlanner": {
-    "AnthropicApiKey": "sk-test-key",
-    "ApiKey": "test-web-auth-key-12345",
+  "Auth": {
+    "ApiKey": {
+      "Value": "test-web-auth-key-12345"
+    },
 
     // Optional
-    "RevenueCatApiKey": "test-key",
-    "RevenueCatProjectId": "test-project",
-    "RevenueCatProEntitlementId": "pro"
+    "PurchaseToken": {
+      "RevenueCatApiKey": "test-key",
+      "RevenueCatProjectId": "test-project",
+      "RevenueCatProEntitlementId": "pro"
+    }
+  },
+  "AiPlanner": {
+    "AnthropicApiKey": "sk-test-key"
   }
 }
 ```
@@ -74,7 +80,37 @@ To run against SQLite instead, replace the `Database` section with a file path:
 }
 ```
 
-**Note:** `AiPlanner:RevenueCatApiKey` can be omitted if `AiPlanner:ApiKey` is provided. It is used only for validating in-app purchases for the AI planner.
+**Note:** the `Auth:PurchaseToken` section can be omitted if `Auth:ApiKey:Value` is provided. It is
+used only for validating in-app purchases, which a self-hosted deployment has no way to issue.
+
+### Authentication
+
+All authentication configuration lives under the `Auth` section. Each subsection is one way a caller
+can prove who it is, and endpoints choose which of them they accept:
+
+| Method                | Header                                     | Configured by         | Accepted by            |
+| --------------------- | ------------------------------------------ | --------------------- | ---------------------- |
+| `Auth:ApiKey`         | `X-API-Key: <value>`                       | `Value`               | `/backup`, AI planner  |
+| `Auth:PurchaseToken`  | `Authorization: Bearer RevenueCat <token>` | `RevenueCat*` options | AI planner             |
+
+```json
+{
+  "Auth": {
+    "ApiKey": {
+      "Value": "some-long-random-key"
+    },
+    "PurchaseToken": {
+      "RevenueCatApiKey": "sk-...",
+      "RevenueCatProjectId": "proj...",
+      "RevenueCatProEntitlementId": "pro"
+    }
+  }
+}
+```
+
+A method with no configuration never authenticates anyone, so leaving `Auth:ApiKey:Value` unset
+means every `/backup` request is rejected with 401. An endpoint that accepts more than one method
+succeeds as soon as any of them does.
 
 ### Features
 
@@ -99,7 +135,7 @@ authenticated against a feed account, so sharing cannot work without user endpoi
 ### Backups
 
 All backup configuration lives under the `Backup` section. The `/backup` endpoint accepts a backup
-body authenticated with `Backup:ApiKey`, and stores it through a sink chosen by `Backup:Sink`.
+body authenticated with `Auth:ApiKey:Value`, and stores it through a sink chosen by `Backup:Sink`.
 The chosen sink is configured by `Backup:SinkOptions`. No sink is configured by default, and the
 endpoint returns 422 until one is.
 
@@ -109,7 +145,6 @@ Writing to a directory on disk:
 {
   "Backup": {
     "Sink": "File",
-    "ApiKey": "some-long-random-key",
     "SinkOptions": {
       "BackupDirectory": "/srv/liftlog-backups"
     }
@@ -123,7 +158,6 @@ Writing to S3 (or an S3 compatible service such as Cloudflare R2 or MinIO):
 {
   "Backup": {
     "Sink": "S3",
-    "ApiKey": "some-long-random-key",
     "SinkOptions": {
       "BucketName": "liftlog-backups",
       "KeyPrefix": "prod",

@@ -1,4 +1,5 @@
 using System.Net;
+using LiftLog.Api.Authentication;
 using LiftLog.Api.Models;
 using LiftLog.Api.Service;
 using Microsoft.AspNetCore.Hosting;
@@ -15,7 +16,7 @@ namespace LiftLog.Tests.Api.Integration;
 public class AuthenticationIntegrationTests
 {
     private readonly WebApplicationFactory<Program> _factory;
-    private const string TestWebAuthKey = "test-web-auth-key-12345";
+    private const string TestApiKey = "test-api-key-12345";
     private const string TestRevenueCatUserId = "test-user-with-pro";
 
     public AuthenticationIntegrationTests(WebApplicationFactory<Program> factory)
@@ -46,15 +47,16 @@ public class AuthenticationIntegrationTests
                     .GetUserIdHasProEntitlementAsync(Arg.Is<string>(x => x != TestRevenueCatUserId))
                     .Returns(Task.FromResult(false));
                 services.AddSingleton(mockRevenueCatService);
-
-                // Override the WebAuthPurchaseVerificationService with our test key
-                services.AddScoped(_ => new WebAuthPurchaseVerificationService(TestWebAuthKey));
+            },
+            extraConfiguration: new Dictionary<string, string?>
+            {
+                [AuthConfiguration.ApiKey.ValuePath] = TestApiKey,
             }
         );
     }
 
     [Test]
-    public async Task AiChatHub_WithValidWebAuth_ShouldConnect()
+    public async Task AiChatHub_WithValidApiKey_ShouldConnect()
     {
         // Arrange
         var server = _factory.Server;
@@ -64,7 +66,7 @@ public class AuthenticationIntegrationTests
                 options =>
                 {
                     options.HttpMessageHandlerFactory = _ => server.CreateHandler();
-                    options.Headers.Add("Authorization", $"Web {TestWebAuthKey}");
+                    options.Headers.Add("X-API-Key", TestApiKey);
                 }
             )
             .Build();
@@ -140,7 +142,7 @@ public class AuthenticationIntegrationTests
     }
 
     [Test]
-    public async Task AiChatHub_WithInvalidWebAuthToken_ShouldFailToConnect()
+    public async Task AiChatHub_WithInvalidApiKey_ShouldFailToConnect()
     {
         // Arrange
         var server = _factory.Server;
@@ -150,7 +152,7 @@ public class AuthenticationIntegrationTests
                 options =>
                 {
                     options.HttpMessageHandlerFactory = _ => server.CreateHandler();
-                    options.Headers.Add("Authorization", "Web invalid-token");
+                    options.Headers.Add("X-API-Key", "invalid-key");
                 }
             )
             .Build();
@@ -196,7 +198,7 @@ public class AuthenticationIntegrationTests
                 options =>
                 {
                     options.HttpMessageHandlerFactory = _ => server.CreateHandler();
-                    options.Headers.Add("Authorization", $"InvalidStore {TestWebAuthKey}");
+                    options.Headers.Add("Authorization", "InvalidStore some-token");
                 }
             )
             .Build();
@@ -243,7 +245,7 @@ public class AuthenticationIntegrationTests
                 options =>
                 {
                     options.HttpMessageHandlerFactory = _ => server.CreateHandler();
-                    options.Headers.Add("Authorization", $"Web {TestWebAuthKey}");
+                    options.Headers.Add("X-API-Key", TestApiKey);
                 }
             )
             .Build();

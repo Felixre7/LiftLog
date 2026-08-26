@@ -45,11 +45,11 @@ block cleartext HTTP, so this is not optional.
 
 How much of the app you can point at your server depends on the feature, eventually all features will be able to target your backend:
 
-| Feature       | Can the app use your server today?                                                                                                                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Remote backup | **Yes.** Settings → Export, backup, and restore → Automatic remote backup. Set the endpoint to `https://your-host/backup` and the API key to your `Backup__ApiKey`. |
-| Social feed   | Not yet - the base URL is compiled in ([`api-consts.ts`](../app/src/services/api-consts.ts)).                                                                       |
-| AI planner    | Not yet - same base URL.                                                                                                                                            |
+| Feature       | Can the app use your server today?                                                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Remote backup | **Yes.** Settings → Export, backup, and restore → Automatic remote backup. Set the endpoint to `https://your-host/backup` and the API key to your `Auth__ApiKey__Value`. |
+| Social feed   | Not yet - the base URL is compiled in ([`api-consts.ts`](../app/src/services/api-consts.ts)).                                                                            |
+| AI planner    | Not yet - same base URL.                                                                                                                                                 |
 
 ## Turning features off
 
@@ -71,9 +71,27 @@ Beyond the flags above, features must be configured to work.
 
 Nothing to configure. It works as soon as the server is running. See [FeedProcess.md](./FeedProcess.md) for a breakdown of the end to end encryption process.
 
+### Authentication
+
+| Method                | Header                                     | Accepted by           |
+| --------------------- | ------------------------------------------ | --------------------- |
+| `Auth__ApiKey__Value` | `X-API-Key: <value>`                       | `/backup`, AI planner |
+| `Auth__PurchaseToken` | `Authorization: Bearer RevenueCat <token>` | AI planner            |
+
+`Auth__PurchaseToken` verifies App Store / Play Store purchases through RevenueCat, which a
+self-hosted deployment has no way to issue - so **`Auth__ApiKey__Value` is the one you want**:
+
+```yaml
+Auth__ApiKey__Value: some-long-random-key
+```
+
+A method with no configuration never authenticates anyone. With no API key set, every request to
+`/backup` is rejected with 401.
+
 ### Remote backup
 
-Accepts a `POST /backup` of a `.liftlogbackup.gz` body, authenticated with an `X-API-Key` header. See
+Accepts a `POST /backup` of a `.liftlogbackup.gz` body, authenticated with an `X-API-Key` header
+(see [Authentication](#authentication)). See
 [RemoteBackup.md](./RemoteBackup.md) for the app-side settings.
 Backups can be stored in different locations:
 
@@ -85,7 +103,7 @@ does not, so mount a volume straight at it:
 ```yaml
 environment:
   Backup__Sink: File
-  Backup__ApiKey: some-long-random-key
+  Auth__ApiKey__Value: some-long-random-key
   Backup__SinkOptions__BackupDirectory: /var/lib/liftlog/backups
 volumes:
   - liftlog_backups:/var/lib/liftlog/backups
@@ -97,28 +115,19 @@ Any S3-compatible bucket (Cloudflare R2, MinIO, S3 itself):
 
 ```yaml
 Backup__Sink: S3
-Backup__ApiKey: some-long-random-key
+Auth__ApiKey__Value: some-long-random-key
 Backup__SinkOptions__BucketName: liftlog-backups
 Backup__SinkOptions__Region: ap-southeast-2
 ```
 
-`Backup__ApiKey` is what makes the endpoint reachable at all: with no key set, every request to
-`/backup` is rejected with 401. With a key set but no sink, it returns 422. Full sink options are in
-the [backend README](../backend/README.md#backups).
-
 ### AI planner
 
-Bring your own Anthropic API key. This calls a paid API on your own account, and there is no metering
-in front of it, so only expose it to people you trust.
+Bring your own Anthropic API key. This calls a paid API on your own account.
 
 ```yaml
 AiPlanner__AnthropicApiKey: sk-ant-...
-AiPlanner__ApiKey: some-long-random-key
+Auth__ApiKey__Value: some-long-random-key
 ```
-
-`AiPlanner__ApiKey` is a shared secret a client presents as its pro token. Leave it unset and
-the only way to authorise a planner request is an App Store / Play Store purchase verified through
-RevenueCat, which a self-hosted deployment has no way to issue.
 
 `AiPlanner__AnthropicModelId` overrides the model, defaulting to `claude-sonnet-4-6`.
 
@@ -175,11 +184,10 @@ Configuration uses standard ASP.NET Core binding, so any `Section:Key` from the
 | `Database__Provider`          | `Postgres`          | `Sqlite` or `Postgres`.                       |
 | `Database__ConnectionString`  | none (required)     | Connection string for the chosen provider.    |
 | `SkipDatabaseMigrations`      | `false`             | Set `true` to apply migrations yourself.      |
-| `Backup__ApiKey`              | none                | Value the app must send as `X-API-Key`.       |
+| `Auth__ApiKey__Value`         | none                | Value the app must send as `X-API-Key`.       |
 | `Backup__Sink`                | none                | `File` or `S3`.                               |
 | `AiPlanner__AnthropicApiKey`  | none                | Anthropic key the planner calls with.         |
 | `AiPlanner__AnthropicModelId` | `claude-sonnet-4-6` | Overrides the model.                          |
-| `AiPlanner__ApiKey`           | none                | Shared secret accepted as a pro token.        |
 
 The container listens on port `8080`, runs as a non-root user, and uses `/var/lib/liftlog` as its
 data directory. Health check: `GET /health`.

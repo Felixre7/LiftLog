@@ -10,7 +10,6 @@ public static class BackupConfiguration
 {
     public const string SectionName = "Backup";
     public const string SinkPath = $"{SectionName}:Sink";
-    public const string ApiKeyPath = $"{SectionName}:ApiKey";
     public const string SinkOptionsPath = $"{SectionName}:SinkOptions";
 }
 

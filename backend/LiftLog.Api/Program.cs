@@ -49,7 +49,9 @@ builder
         ApiKeyAuthenticationSchemeOptions.SchemeName,
         options =>
         {
-            options.ApiKey = builder.Configuration.GetValue<string>(BackupConfiguration.ApiKeyPath);
+            options.ApiKey = builder.Configuration.GetValue<string>(
+                AuthConfiguration.ApiKey.ValuePath
+            );
         }
     );
 
@@ -64,7 +66,6 @@ builder.AddBackupSink();
 builder.Services.AddScoped<PurchaseVerificationService>();
 builder.Services.AddAnthropicWorkoutPlanner();
 builder.Services.AddAnthropicWorkoutPlannerV2();
-builder.Services.AddWebAuthPurchaseVerification();
 builder.Services.AddRevenueCatPurchaseVerification();
 builder.Services.AddHostedService<ConfigurationLogger>();
 

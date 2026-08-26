@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Anthropic;
+using LiftLog.Api.Authentication;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Kiota.Abstractions.Authentication;
@@ -15,11 +16,6 @@ public static class AiPlannerConfiguration
     public const string SectionName = "AiPlanner";
     public const string AnthropicApiKeyPath = $"{SectionName}:AnthropicApiKey";
     public const string AnthropicModelIdPath = $"{SectionName}:AnthropicModelId";
-    public const string ApiKeyPath = $"{SectionName}:ApiKey";
-    public const string RevenueCatApiKeyPath = $"{SectionName}:RevenueCatApiKey";
-    public const string RevenueCatProjectIdPath = $"{SectionName}:RevenueCatProjectId";
-    public const string RevenueCatProEntitlementIdPath =
-        $"{SectionName}:RevenueCatProEntitlementId";
 }
 
 public static class RegistrationHelpers
@@ -88,9 +84,9 @@ public static class RegistrationHelpers
         {
             var configuration = services.GetRequiredService<IConfiguration>();
             var accessTokenProvider = new AccessTokenProvider(
-                configuration.GetValue<string>(AiPlannerConfiguration.RevenueCatApiKeyPath)
+                configuration.GetValue<string>(AuthConfiguration.PurchaseToken.RevenueCatApiKeyPath)
                     ?? throw new Exception(
-                        $"'{AiPlannerConfiguration.RevenueCatApiKeyPath}' is not configured."
+                        $"'{AuthConfiguration.PurchaseToken.RevenueCatApiKeyPath}' is not configured."
                     )
             );
             var authProvider = new BaseBearerTokenAuthenticationProvider(accessTokenProvider);
@@ -98,17 +94,19 @@ public static class RegistrationHelpers
             var adapter = new HttpClientRequestAdapter(authProvider);
             var revenueCatClient = new RevenueCatClient(adapter);
             var projectConfiguredRevenueCatApiClient = revenueCatClient.Projects[
-                configuration.GetValue<string>(AiPlannerConfiguration.RevenueCatProjectIdPath)
+                configuration.GetValue<string>(
+                    AuthConfiguration.PurchaseToken.RevenueCatProjectIdPath
+                )
                     ?? throw new Exception(
-                        $"'{AiPlannerConfiguration.RevenueCatProjectIdPath}' is not configured."
+                        $"'{AuthConfiguration.PurchaseToken.RevenueCatProjectIdPath}' is not configured."
                     )
             ];
             var proEntitlementId =
                 configuration.GetValue<string>(
-                    AiPlannerConfiguration.RevenueCatProEntitlementIdPath
+                    AuthConfiguration.PurchaseToken.RevenueCatProEntitlementIdPath
                 )
                 ?? throw new Exception(
-                    $"'{AiPlannerConfiguration.RevenueCatProEntitlementIdPath}' is not configured."
+                    $"'{AuthConfiguration.PurchaseToken.RevenueCatProEntitlementIdPath}' is not configured."
                 );
             return new RevenueCatPurchaseVerificationService(
                 projectConfiguredRevenueCatApiClient,
@@ -116,19 +114,6 @@ public static class RegistrationHelpers
             );
         });
 
-        return source;
-    }
-
-    public static IServiceCollection AddWebAuthPurchaseVerification(this IServiceCollection source)
-    {
-        source.AddSingleton(
-            (service) =>
-            {
-                var configuration = service.GetRequiredService<IConfiguration>();
-                var webAuthKey = configuration.GetValue<string?>(AiPlannerConfiguration.ApiKeyPath);
-                return new WebAuthPurchaseVerificationService(webAuthKey);
-            }
-        );
         return source;
     }
 

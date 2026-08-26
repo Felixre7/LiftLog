@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Anthropic.Models.Messages;
+using LiftLog.Api.Authentication;
 using LiftLog.Api.Models;
 using LiftLog.Api.Service;
 using LiftLog.Tests.Api.Unit.Helpers;
@@ -17,7 +18,7 @@ namespace LiftLog.Tests.Api.Integration;
 [ClassDataSource<WebApplicationFactory<Program>>(Shared = SharedType.PerClass)]
 public class AiWorkoutPlannerV2IntegrationTests
 {
-    private const string TestWebAuthKey = "test-web-auth-key-12345";
+    private const string TestApiKey = "test-api-key-12345";
 
     private static readonly int CurrentVersion = new AiPlanToolProvider().CurrentAiPlanVersion;
 
@@ -41,8 +42,6 @@ public class AiWorkoutPlannerV2IntegrationTests
             factory,
             services =>
             {
-                services.AddScoped(_ => new WebAuthPurchaseVerificationService(TestWebAuthKey));
-
                 var mockRevenueCatService =
                     Substitute.For<IRevenueCatPurchaseVerificationService>();
                 mockRevenueCatService
@@ -55,6 +54,10 @@ public class AiWorkoutPlannerV2IntegrationTests
                 services.AddSingleton<IAnthropicMessageStreamer>(
                     new FakeAnthropicMessageStreamer(events)
                 );
+            },
+            extraConfiguration: new Dictionary<string, string?>
+            {
+                [AuthConfiguration.ApiKey.ValuePath] = TestApiKey,
             }
         );
     }
@@ -86,7 +89,7 @@ public class AiWorkoutPlannerV2IntegrationTests
                 options =>
                 {
                     options.HttpMessageHandlerFactory = _ => server.CreateHandler();
-                    options.Headers.Add("Authorization", $"Web {TestWebAuthKey}");
+                    options.Headers.Add("X-API-Key", TestApiKey);
                 }
             )
             .AddJsonProtocol()
