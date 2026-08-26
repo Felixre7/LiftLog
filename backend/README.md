@@ -1,6 +1,7 @@
 ## LiftLog Backend
 
 The LiftLog backend is written in C# on the latest .NET. The backend is responsible for storing and serving user feeds (which are end-to-end encrypted) and serving the AI planner. It stores data in either **PostgreSQL** or **SQLite**, selected by configuration.
+These docs mainly focus on the developer flow. Want to run your own self hosted backend? See the [Self hosting](../docs/SelfHosting.md) guide for a quickstart.
 
 ### Prerequisites
 
@@ -36,13 +37,13 @@ The backend supports two providers, chosen with `Database:Provider`:
 | `Postgres` (default) | When you expect more than a few users                                    |
 | `Sqlite`             | Self-hosting a single instance. No database server to run - just a file. |
 
-For Postgres, a local instance is available from the provided Docker Compose file. For SQLite there is nothing to install - the schema is created on first boot.
+For Postgres, a local instance is available from the [Docker Compose override](LiftLog.Api/docker-compose.postgres.yml). For SQLite there is nothing to install - the schema is created on first boot, and it is what the default Docker Compose stack uses.
 
 ### Configuration
 
 Before running the backend, you need to create a configuration file at [LiftLog.Api/appsettings.Development.json](LiftLog.Api/appsettings.Development.json).
 
-Here is an example configuration that works with the Docker Compose setup:
+Here is an example configuration for running from source against the Postgres Compose override:
 
 ```json
 {
@@ -50,13 +51,15 @@ Here is an example configuration that works with the Docker Compose setup:
     "Provider": "Postgres",
     "ConnectionString": "Host=localhost;Port=5400;Database=liftlog;Username=postgres;Password=password"
   },
-  "AnthropicApiKey": "sk-test-key",
-  "WebAuthApiKey": "test-web-auth-key-12345",
+  "AiPlanner": {
+    "AnthropicApiKey": "sk-test-key",
+    "ApiKey": "test-web-auth-key-12345",
 
-  // Optional
-  "RevenueCatApiKey": "test-key",
-  "RevenueCatProjectId": "test-project",
-  "RevenueCatProEntitlementId": "pro"
+    // Optional
+    "RevenueCatApiKey": "test-key",
+    "RevenueCatProjectId": "test-project",
+    "RevenueCatProEntitlementId": "pro"
+  }
 }
 ```
 
@@ -71,7 +74,27 @@ To run against SQLite instead, replace the `Database` section with a file path:
 }
 ```
 
-**Note:** The `RevenueCatApiKey` can be omitted if a `WebAuthApiKey` is provided. It is used only for validating in-app purchases for the AI planner.
+**Note:** `AiPlanner:RevenueCatApiKey` can be omitted if `AiPlanner:ApiKey` is provided. It is used only for validating in-app purchases for the AI planner.
+
+### Features
+
+The four remote features - `Feed`, `Sharing`, `Backup` and `AiPlanner` - are each gated by an
+`Enabled` flag in their own configuration section. All default to **on**, so an existing deployment
+needs no change. Setting one to `false` makes its controllers return `423 Locked`:
+
+```json
+{
+  "Feed": { "Enabled": false },
+  "Sharing": { "Enabled": true },
+  "Backup": { "Enabled": true },
+  "AiPlanner": { "Enabled": false }
+}
+```
+
+Controllers declare their feature with `[FeatureCheck(Feature.Feed)]`. Some
+controllers list more than one feature and stay reachable while any of them is on -
+`UserController` is `[FeatureCheck(Feature.Feed, Feature.Sharing)]` because a shared item is
+authenticated against a feed account, so sharing cannot work without user endpoints.
 
 ### Backups
 
@@ -119,15 +142,34 @@ unless `AccessKeyId` and `SecretAccessKey` are both set.
 
 ### Running the Backend
 
-Start the PostgreSQL database and run the backend:
+The quickest start is Docker Compose, which builds the API image and runs it against SQLite with no
+database server and no configuration:
 
 ```bash
 cd ./backend/LiftLog.Api
-docker compose up -d
+docker compose up
+```
+
+The backend is now running at `http://localhost:5264`, with its SQLite file on the `liftlog_data`
+volume. Set `ANTHROPIC_API_KEY` in the environment (or a `.env` file beside the compose file) if you
+want the AI planner to work.
+
+To run against Postgres instead, layer the override, which adds the database service and repoints the
+API at it:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml up
+```
+
+Postgres is also published on host port `5400`, so you can bring up just the database and run the API
+from source against it:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d postgres
 dotnet run
 ```
 
-Or, with no database server at all:
+Running from source against SQLite needs no services at all:
 
 ```bash
 cd ./backend/LiftLog.Api
@@ -136,7 +178,27 @@ Database__Provider=Sqlite Database__ConnectionString="Data Source=liftlog.db" do
 
 Either way the schema is migrated on startup (set `SkipDatabaseMigrations` to opt out).
 
-The backend should now be running at `http://localhost:5264`!
+### The Docker image
+
+The image is built by [backend/Dockerfile](Dockerfile) and published to
+`ghcr.io/liammorrow/liftlog:api` for `linux/amd64` and `linux/arm64`.
+
+Build it yourself **from the repository root**.
+
+```bash
+docker build -f backend/Dockerfile -t liftlog-api .
+```
+
+The container listens on port `8080`, runs as a non-root user, and treats `/var/lib/liftlog` as its
+data directory - mount a volume there when using SQLite.:
+
+```bash
+docker run -p 8080:8080 \
+  -v liftlog_data:/var/lib/liftlog \
+  -e Database__Provider=Sqlite \
+  -e Database__ConnectionString="Data Source=/var/lib/liftlog/liftlog.db" \
+  ghcr.io/liammorrow/liftlog:api
+```
 
 ### Running the Tests
 

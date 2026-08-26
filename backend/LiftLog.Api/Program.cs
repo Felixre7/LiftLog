@@ -2,11 +2,13 @@ using System.Text.Json.Serialization;
 using FluentValidation;
 using LiftLog.Api.Authentication;
 using LiftLog.Api.Db;
+using LiftLog.Api.Features;
 using LiftLog.Api.Hubs;
 using LiftLog.Api.Service;
 using LiftLog.Api.Service.Backup;
 using LiftLog.Api.Validators;
 using LiftLog.Lib.Serialization;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +27,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("*").AllowAnyHeader().AllowAnyMethod();
     });
 });
+
+builder.Services.AddFeatureGating();
 
 builder.Services.AddSignalR(s =>
 {
@@ -88,9 +92,22 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Map SignalR Hubs
-app.MapHub<AiWorkoutChatHub>("/ai-chat");
-app.MapHub<AiWorkoutChatHubV2>("/ai-chat-v2");
+MapAiChatHub<AiWorkoutChatHub>("/ai-chat");
+MapAiChatHub<AiWorkoutChatHubV2>("/ai-chat-v2");
+
+void MapAiChatHub<THub>(string path)
+    where THub : Hub
+{
+    if (app.Services.GetRequiredService<IFeatureGate>().IsEnabled(Feature.AiPlanner))
+    {
+        app.MapHub<THub>(path);
+        return;
+    }
+
+    var locked = () => Results.StatusCode(StatusCodes.Status423Locked);
+    app.Map(path, locked);
+    app.Map($"{path}/{{**rest}}", locked);
+}
 
 app.MapMethods(
     "/health",

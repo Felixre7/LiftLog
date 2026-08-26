@@ -1,4 +1,5 @@
 using LiftLog.Api.Authentication;
+using LiftLog.Api.Features;
 using LiftLog.Api.Models;
 using LiftLog.Api.Service;
 using Microsoft.AspNetCore.Authorization;
@@ -12,6 +13,7 @@ public interface IChatClient
 }
 
 [Authorize(AuthenticationSchemes = PurchaseTokenAuthenticationSchemeOptions.SchemeName)]
+[FeatureCheck(Feature.AiPlanner)]
 public class AiWorkoutChatHub(IAiChatDirectory chatDirectory) : Hub<IChatClient>
 {
     public async Task SendMessage(string message)

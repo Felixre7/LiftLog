@@ -10,6 +10,18 @@ using Microsoft.Kiota.Abstractions.Authentication;
 using Microsoft.Kiota.Http.HttpClientLibrary;
 using RevenueCat.Client;
 
+public static class AiPlannerConfiguration
+{
+    public const string SectionName = "AiPlanner";
+    public const string AnthropicApiKeyPath = $"{SectionName}:AnthropicApiKey";
+    public const string AnthropicModelIdPath = $"{SectionName}:AnthropicModelId";
+    public const string ApiKeyPath = $"{SectionName}:ApiKey";
+    public const string RevenueCatApiKeyPath = $"{SectionName}:RevenueCatApiKey";
+    public const string RevenueCatProjectIdPath = $"{SectionName}:RevenueCatProjectId";
+    public const string RevenueCatProEntitlementIdPath =
+        $"{SectionName}:RevenueCatProEntitlementId";
+}
+
 public static class RegistrationHelpers
 {
     /// <summary>
@@ -24,15 +36,18 @@ public static class RegistrationHelpers
         {
             var configuration = services.GetRequiredService<IConfiguration>();
             var apiKey =
-                configuration.GetValue<string?>("AnthropicApiKey")
-                ?? throw new Exception("AnthropicApiKey configuration is not set.");
+                configuration.GetValue<string?>(AiPlannerConfiguration.AnthropicApiKeyPath)
+                ?? throw new Exception(
+                    $"'{AiPlannerConfiguration.AnthropicApiKeyPath}' is not configured."
+                );
 
             var anthropicClient = new AnthropicClient { ApiKey = apiKey };
 
             // Use claude-sonnet-4-6 as a good balance of capability and cost
             // Can be configured via configuration if needed
             var modelId =
-                configuration.GetValue<string?>("AnthropicModelId") ?? "claude-sonnet-4-6";
+                configuration.GetValue<string?>(AiPlannerConfiguration.AnthropicModelIdPath)
+                ?? "claude-sonnet-4-6";
 
             return anthropicClient.AsIChatClient(modelId);
         });
@@ -52,8 +67,10 @@ public static class RegistrationHelpers
         {
             var configuration = services.GetRequiredService<IConfiguration>();
             var apiKey =
-                configuration.GetValue<string?>("AnthropicApiKey")
-                ?? throw new Exception("AnthropicApiKey configuration is not set.");
+                configuration.GetValue<string?>(AiPlannerConfiguration.AnthropicApiKeyPath)
+                ?? throw new Exception(
+                    $"'{AiPlannerConfiguration.AnthropicApiKeyPath}' is not configured."
+                );
             return new AnthropicClient { ApiKey = apiKey };
         });
 
@@ -71,20 +88,28 @@ public static class RegistrationHelpers
         {
             var configuration = services.GetRequiredService<IConfiguration>();
             var accessTokenProvider = new AccessTokenProvider(
-                configuration.GetValue<string>("RevenueCatApiKey")
-                    ?? throw new Exception("RevenueCatApiKey not set")
+                configuration.GetValue<string>(AiPlannerConfiguration.RevenueCatApiKeyPath)
+                    ?? throw new Exception(
+                        $"'{AiPlannerConfiguration.RevenueCatApiKeyPath}' is not configured."
+                    )
             );
             var authProvider = new BaseBearerTokenAuthenticationProvider(accessTokenProvider);
 
             var adapter = new HttpClientRequestAdapter(authProvider);
             var revenueCatClient = new RevenueCatClient(adapter);
             var projectConfiguredRevenueCatApiClient = revenueCatClient.Projects[
-                configuration.GetValue<string>("RevenueCatProjectId")
-                    ?? throw new Exception("RevenueCatProjectId not set")
+                configuration.GetValue<string>(AiPlannerConfiguration.RevenueCatProjectIdPath)
+                    ?? throw new Exception(
+                        $"'{AiPlannerConfiguration.RevenueCatProjectIdPath}' is not configured."
+                    )
             ];
             var proEntitlementId =
-                configuration.GetValue<string>("RevenueCatProEntitlementId")
-                ?? throw new Exception("RevenueCatProEntitlementId not set");
+                configuration.GetValue<string>(
+                    AiPlannerConfiguration.RevenueCatProEntitlementIdPath
+                )
+                ?? throw new Exception(
+                    $"'{AiPlannerConfiguration.RevenueCatProEntitlementIdPath}' is not configured."
+                );
             return new RevenueCatPurchaseVerificationService(
                 projectConfiguredRevenueCatApiClient,
                 proEntitlementId
@@ -100,7 +125,7 @@ public static class RegistrationHelpers
             (service) =>
             {
                 var configuration = service.GetRequiredService<IConfiguration>();
-                var webAuthKey = configuration.GetValue<string?>("WebAuthApiKey");
+                var webAuthKey = configuration.GetValue<string?>(AiPlannerConfiguration.ApiKeyPath);
                 return new WebAuthPurchaseVerificationService(webAuthKey);
             }
         );

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using LiftLog.Api.Authentication;
+using LiftLog.Api.Features;
 using LiftLog.Api.Service.Backup;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ namespace LiftLog.Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
+[FeatureCheck(Feature.Backup)]
 public class BackupController(IBackupSink? backupSink = null) : ControllerBase
 {
     [Authorize(AuthenticationSchemes = ApiKeyAuthenticationSchemeOptions.SchemeName)]

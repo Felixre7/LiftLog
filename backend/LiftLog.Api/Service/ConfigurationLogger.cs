@@ -1,4 +1,5 @@
 using LiftLog.Api.Db;
+using LiftLog.Api.Features;
 using LiftLog.Api.Service.Backup;
 
 namespace LiftLog.Api.Service;
@@ -18,6 +19,15 @@ public class ConfigurationLogger(
         );
         var userDataContext = scope.ServiceProvider.GetRequiredService<UserDataContext>();
         logger.LogInformation("Registered database: {Database}", userDataContext.DataSource());
+        var featureGate = scope.ServiceProvider.GetRequiredService<IFeatureGate>();
+        foreach (var feature in Enum.GetValues<Feature>())
+        {
+            logger.LogInformation(
+                "Feature {Feature}: {State}",
+                feature,
+                featureGate.IsEnabled(feature) ? "enabled" : "disabled"
+            );
+        }
         return Task.CompletedTask;
     }
 

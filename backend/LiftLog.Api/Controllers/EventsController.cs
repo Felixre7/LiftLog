@@ -1,5 +1,6 @@
 using FluentValidation;
 using LiftLog.Api.Db;
+using LiftLog.Api.Features;
 using LiftLog.Api.Models;
 using LiftLog.Lib.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LiftLog.Api.Controllers;
 
 [ApiController]
+[FeatureCheck(Feature.Feed)]
 public class EventsController(UserDataContext db) : ControllerBase
 {
     [HttpPost]

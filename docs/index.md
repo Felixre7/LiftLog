@@ -31,6 +31,12 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 - [RemoteBackup.md](./RemoteBackup.md) — the automatic remote backup: the app-side settings, the HTTPS
   requirement, and the contract a self-hosted backup endpoint must satisfy.
 
+## Running it yourself
+
+- [SelfHosting.md](./SelfHosting.md) — quickstart for running your own backend: a copy-paste Docker
+  Compose file, how to point the app at it, and the environment variables that switch on the feed,
+  remote backup, and AI planner. Pairs with the [backend README](../backend/README.md).
+
 ## Generated
 
 - [schemas/](./schemas) - JSON schemas generated from the app's models: `ai-plan/`,
