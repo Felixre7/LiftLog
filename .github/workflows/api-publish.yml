@@ -1,8 +1,15 @@
 name: Publish API docker image to GitHub Container Registry
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: "Version code (e.g., 1.0.0)"
+        required: true
+        type: string
+      commit_sha:
+        description: "Commit SHA to checkout (optional, defaults to the branch head)"
+        required: false
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -20,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.commit_sha || github.ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -36,6 +45,14 @@ jobs:
         run: dotnet publish --os linux --arch x64 /t:PublishContainer -c Release
         working-directory: backend/LiftLog.Api
       - name: Tag image
-        run: docker tag liftlog-api:latest ghcr.io/liammorrow/liftlog:api
+        env:
+          VERSION: ${{ inputs.version_code }}
+        run: |
+          docker tag liftlog-api:latest ghcr.io/liammorrow/liftlog:api
+          docker tag liftlog-api:latest "ghcr.io/liammorrow/liftlog:api-${VERSION}"
       - name: Push image
-        run: docker push ghcr.io/liammorrow/liftlog:api
+        env:
+          VERSION: ${{ inputs.version_code }}
+        run: |
+          docker push ghcr.io/liammorrow/liftlog:api
+          docker push "ghcr.io/liammorrow/liftlog:api-${VERSION}"
