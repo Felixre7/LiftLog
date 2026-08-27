@@ -53,7 +53,7 @@ describe('plan-file', () => {
 
   it('rejects a file that is not valid JSON', () => {
     const result = parseProgramBlueprintFile(new TextEncoder().encode('not json'));
-    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({ ok: false, failure: 'notAPlan' });
   });
 
   it('migrates a legacy (v1) plan file to the latest version', () => {
@@ -145,7 +145,24 @@ describe('plan-file', () => {
 
   it('rejects a plan whose shape does not match the schema', () => {
     const result = parseProgramBlueprintFile(encode({ version: 2, name: 'Broken', sessions: 'nope' }));
-    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({ ok: false, failure: 'notAPlan' });
+  });
+
+  // A plan written by a later release migrates forward, not backward. Telling the
+  // user the file is invalid sends them hunting a problem that is in their app,
+  // not their plan - so this case has to stay distinguishable.
+  it('reports a plan from a newer app as needing an update, not as invalid', () => {
+    const fromTheFuture = { ...validBlueprint, sessions: [{ ...validBlueprint.sessions[0]!, version: 999 }] };
+
+    const result = parseProgramBlueprintFile(encode(fromTheFuture));
+
+    expect(result).toMatchObject({ ok: false, failure: 'needsNewerApp' });
+  });
+
+  it('reports a program version from a newer app as needing an update', () => {
+    const result = parseProgramBlueprintFile(encode({ ...validBlueprint, version: 999 }));
+
+    expect(result).toMatchObject({ ok: false, failure: 'needsNewerApp' });
   });
 
   // The plan-builder skill publishes these as the reference for anyone authoring

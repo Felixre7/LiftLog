@@ -23,7 +23,7 @@ This repository ships a Claude skill that writes plan files for you. Describe th
 
 Download [`create-liftlog-plan.zip`](https://github.com/LiamMorrow/LiftLog/releases/download/plan-builder-skill/create-liftlog-plan.zip), then in Claude go to `Customize -> Skills -> + -> Upload a skill` and select it.
 
-That zip is rebuilt from this repository on every change, so it is always the current skill.
+That zip is rebuilt whenever the skill is released, so it always matches the newest released format rather than whatever is on `main`.
 
 Once it is installed, just ask for what you want:
 
@@ -127,12 +127,12 @@ An exercise is either a `WeightedExerciseBlueprint` or a `CardioExerciseBlueprin
 
 `progression` is an ordered list of rules. After a session where every set met its target, the first rule that still has room to move is applied - and only that one. An empty list means the exercise never moves on its own.
 
-| Field       | Effect                                                                                                                             |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `axis`      | What the rule moves: `load` or `reps`.                                                                                             |
+| Field       | Effect                                                                                                                              |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `axis`      | What the rule moves: `load` or `reps`.                                                                                              |
 | `step`      | How much to add, as a decimal string. Unitless - `"2.5"` is the same pair of small plates in a kilo gym and a pound gym.            |
 | `scope`     | `{ "type": "allSets" }`, or `{ "type": "lowestSets", "pick": … }` with `first`, `middle`, `last` or `all` to raise only the lowest. |
-| `trigger`   | Always `allSetsMetTarget`.                                                                                                         |
+| `trigger`   | Always `allSetsMetTarget`.                                                                                                          |
 | `ceiling`   | Optional, reps only. Where the rule stops, handing over to the next one.                                                            |
 | `onCeiling` | Optional, reps only. `reset` drops the reps back to the plan's when a later rule takes over.                                        |
 
@@ -157,7 +157,7 @@ My Plan.liftlogplan is not a valid LiftLog plan:
   plan/sessions/1/exercises/0/progression/0/step must be string
 ```
 
-This is worth doing, because the app itself will only tell you _"That file isn't a valid workout plan"_ - it cannot tell you which field is wrong.
+This is worth doing, because when a field is wrong the app will only tell you _"That file isn't a valid workout plan"_ - it cannot tell you which one.
 
 ## Regenerating the schema
 
@@ -167,4 +167,6 @@ Both the schema and the validator are generated from `app/src/models/storage/ver
 cd app && npm run json-schema
 ```
 
-This rewrites the published schema, the copy bundled into the app, the copy inside the skill, and the skill's validator. See [Storage Migrations](./Migrations.md) for the full process of changing a stored model.
+This rewrites the published schema, the copy bundled into the app, the copy inside the skill, and the skill's validator. CI checks the committed copies still match the models on every branch, so all four move together on `main`. Users only see the change once the `plan-builder-skill` tag advances, which `scripts/release-plan-builder-skill.ts` does - run by hand once the release is live in the stores, not when it is uploaded to them.
+
+See [Storage Migrations](./Migrations.md) for the full process of changing a stored model.

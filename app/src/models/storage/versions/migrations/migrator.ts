@@ -17,6 +17,22 @@ export type Migration<TInput = unknown, TOutput = unknown> = {
   up: (state: TInput) => TOutput;
 };
 
+/**
+ * Thrown when a value carries a version this build has never heard of - it was
+ * written by a newer app than the one reading it. Distinguishable from a
+ * corrupt or unrecognised value so callers can tell the user to update rather
+ * than that their file is broken.
+ */
+export class UnsupportedVersionError extends Error {
+  constructor(
+    readonly version: number,
+    readonly latestVersion: number,
+  ) {
+    super(`Cannot migrate value at version ${version}: latest known version is ${latestVersion}`);
+    this.name = 'UnsupportedVersionError';
+  }
+}
+
 /** A {@link Migration} with both type parameters erased. */
 type AnyMigration = Migration<any, any>;
 
@@ -243,9 +259,7 @@ class MigratorImpl<TFinal, TAny, TMigrations extends readonly [...AnyMigration[]
   ): TMigrations[TVersion]['$type'] {
     const currentVersion = value.version ?? 0;
     if (currentVersion > this.latestVersion) {
-      throw new Error(
-        `Cannot migrate value at version ${currentVersion}: latest known version is ${this.latestVersion}`,
-      );
+      throw new UnsupportedVersionError(currentVersion, this.latestVersion);
     }
     if (!this.migrations.length || currentVersion >= maxVersion) {
       return value;

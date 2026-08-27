@@ -2,6 +2,7 @@ import {
   parseProgramBlueprintFile,
   PLAN_FILE_EXTENSION,
   PLAN_FILE_MIME,
+  type PlanFileFailure,
   serializeProgramBlueprint,
 } from '@/models/plan-file';
 import { showSnackbar } from '@/store/app';
@@ -14,6 +15,11 @@ import {
 } from '@/store/program';
 import { AddEffectFn } from '@/store/store';
 import { File } from 'expo-file-system';
+
+const PLAN_IMPORT_ERROR_KEYS: Record<PlanFileFailure, string> = {
+  notAPlan: 'plan.import.error.message',
+  needsNewerApp: 'plan.import.error.needs_newer_app.message',
+};
 
 /** Turns a plan name into a safe file name, e.g. "Push / Pull!" -> "Push_Pull". */
 function toFileName(name: string): string {
@@ -54,10 +60,11 @@ export function applyProgramImportExportEffects(addEffect: AddEffectFn) {
     dispatch(importPlanFromFile({ bytes }));
   });
 
-  addEffect(importPlanFromFile, async ({ payload: { bytes } }, { dispatch, extra: { tolgee } }) => {
+  addEffect(importPlanFromFile, async ({ payload: { bytes } }, { dispatch, extra: { tolgee, logger } }) => {
     const result = parseProgramBlueprintFile(bytes);
     if (!result.ok) {
-      dispatch(showSnackbar({ text: tolgee.t('plan.import.error.message') }));
+      logger.error('Failed to import plan file', { failure: result.failure, error: result.error });
+      dispatch(showSnackbar({ text: tolgee.t(PLAN_IMPORT_ERROR_KEYS[result.failure]) }));
       return;
     }
     dispatch(setPendingImport({ programBlueprint: result.blueprint }));

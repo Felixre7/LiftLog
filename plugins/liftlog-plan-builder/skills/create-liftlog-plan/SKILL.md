@@ -52,6 +52,8 @@ Then tell them how to import it, since it isn't obvious:
 
 > Get the file onto your phone (AirDrop, email, or save it to Files/Drive), then tap it - LiftLog will open it. Or open LiftLog and go to Plans → Import.
 
+If the user says that the app says the plan isn't valid, or the app says they need to update, let them know that they may need to wait for the app store release to roll out.
+
 ## Editing an existing plan
 
 If the user gives you a `.liftlogplan` file to change, read it, modify it, validate it, and hand it back. Keep the fields you weren't asked to touch exactly as they were.
@@ -63,3 +65,5 @@ If they want to change a plan they're already running but haven't given you the 
 Don't rebuild their plan from a verbal description when they could just export it - the file has their real exercise names, rest times, and progressive overload settings, and anything you reconstruct will quietly differ.
 
 When you hand the edited file back, mention that importing it creates a _new_ plan rather than overwriting the old one, so they'll want to delete the original from `Plans` once they've imported the replacement. Their logged workout history isn't affected either way.
+
+There's a good chance that the user will give you a plan which is in a format you don't understand. There are multiple versions and you only know about one of them. Do your best to match their format but let them know this.
