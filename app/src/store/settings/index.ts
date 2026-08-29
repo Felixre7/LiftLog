@@ -1,3 +1,4 @@
+import { Backend } from '@/models/backend';
 import { LiftLog } from '@/gen/proto';
 import { whatsNewEntries, WhatsNewEntry } from '@/models/whats-new';
 import type { RootState } from '@/store';
@@ -71,7 +72,8 @@ export const exportPlainText = createAction<{ format: PlaintextExportFormat }>('
 export const importFromExternal = createAction<{ format: ExternalImportFormat }>('importFromExternal');
 
 export const executeRemoteBackup = createAction<{
-  settings?: RemoteBackupSettings;
+  /** Overrides the assigned backup backend, so the settings screen can test one before saving it. */
+  backend?: Backend;
   force?: boolean;
 }>('executeRemoteBackup');
 
@@ -90,7 +92,7 @@ export const {
   setRestTimersEnabled,
   setCrashReportsEnabled,
   setWelcomeWizardCompleted,
-  setRemoteBackupSettings,
+  setBackupIncludeFeedAccount,
   setLastBackup,
   setBackupReminder,
   setColorSchemeSeed,

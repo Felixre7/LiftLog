@@ -20,7 +20,7 @@
   "backup.reminder.body": "È passato un po' di tempo dall'ultimo backup, è consigliato effettuarli regolarmente per non perdere i tuoi dati. Vuoi effettuare il backup adesso?",
   "backup.reminders.subtitle": "Suggerisci periodicamente un backup quando non hai effettuato alcun backup da un po' di tempo",
   "backup.reminders.title": "Promemoria di backup",
-  "backup.remote.explanation": "Questa funzionalità avanzata permette a LiftLog di inviare i backup ad un server remoto.<br>Perfavore leggi la documentazione per come configurare un server remoto.",
+  "backup.remote.explanation": "Questa funzionalità avanzata permette a LiftLog di inviare i backup ad un server remoto.",
   "backup.restore_data.subtitle": "Importa dati da un file per il ripristino",
   "backup.restore_data.title": "Ripristina dati",
   "backup.sent_successfully.message": "Backup inviato con successo",

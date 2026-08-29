@@ -10,6 +10,7 @@ import {
   labelStyle,
   padding,
   shadow,
+  disabled,
 } from '@expo/ui/swift-ui/modifiers';
 import { floatingShadowModifier } from '@/components/presentation/foundation/floating-shadow';
 import { PageActionsAccessory } from './page-actions-accessory';
@@ -44,6 +45,7 @@ export function PageActions({ primary, secondary = [], primaryExpanded, accessor
           shape: 'capsule',
         }),
         animation(Animation.spring({ duration: 0.35, bounce: 0.2 }), showLabel),
+        disabled(!!action.disabled),
       ]}
     />
   );

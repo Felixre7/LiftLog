@@ -1,9 +1,12 @@
 import { Switch } from '@/components/presentation/foundation/switch';
 import { AppIconSource } from '@/components/presentation/foundation/ms-icon-source';
 import { SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
+import { Text } from 'react-native-paper';
 
 interface ListSwitchProps {
   label: string;
+  supportingText?: string;
   icon: AppIconSource;
   value: boolean;
   onValueChange: (value: boolean) => void;
@@ -12,6 +15,7 @@ interface ListSwitchProps {
 }
 
 export function SegmentedListSwitch(props: ListSwitchProps) {
+  const { colors } = useAppTheme();
   return (
     <SegmentListFormElement
       label={props.label}
@@ -24,6 +28,13 @@ export function SegmentedListSwitch(props: ListSwitchProps) {
           testID={props.testID}
           onValueChange={props.onValueChange}
         />
+      }
+      line2={
+        props.supportingText ? (
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBlockStart: spacing[2] }}>
+            {props.supportingText}
+          </Text>
+        ) : undefined
       }
     />
   );

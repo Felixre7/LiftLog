@@ -284,12 +284,11 @@ describe('PreferenceService - remoteBackupSettings', () => {
     });
   });
 
-  it('writes the three composite keys', async () => {
-    const { service, store } = makeService();
-    await service.setRemoteBackupSettings({ endpoint: 'https://e', apiKey: 'k', includeFeedAccount: true });
-    expect(store.setItem).toHaveBeenCalledWith('remoteBackupSettings.Endpoint', 'https://e');
-    expect(store.setItem).toHaveBeenCalledWith('remoteBackupSettings.ApiKey', 'k');
-    expect(store.setItem).toHaveBeenCalledWith('remoteBackupSettings.IncludeFeedAccount', 'True');
+  // Read-only now: the IMPORT_BACKENDS data migration lifts these into the backend tables, and
+  // nothing writes them again.
+  it('never writes the composite keys', () => {
+    const { service } = makeService();
+    expect('setRemoteBackupSettings' in service).toBe(false);
   });
 });
 

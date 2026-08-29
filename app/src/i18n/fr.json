@@ -21,7 +21,7 @@
   "backup.reminder.body": "Cela fait un moment que vous n'avez pas créé de sauvegarde. Il est FORTEMENT recommandé de sauvegarder vos données régulièrement pour éviter toute perte. Voulez-vous sauvegarder vos données maintenant ?",
   "backup.reminders.subtitle": "Suggérer périodiquement une sauvegarde lorsque vous n'avez pas sauvegardé depuis un moment",
   "backup.reminders.title": "Rappels de sauvegarde",
-  "backup.remote.explanation": "Ceci est une fonctionnalité avancée qui permet à LiftLog d'envoyer des sauvegardes vers un serveur distant.<br>Veuillez lire la documentation pour les instructions sur la configuration d'un serveur distant.",
+  "backup.remote.explanation": "Ceci est une fonctionnalité avancée qui permet à LiftLog d'envoyer des sauvegardes vers un serveur distant.",
   "backup.restore_data.subtitle": "Importer des données depuis un fichier pour restauration",
   "backup.restore_data.title": "Restaurer les données",
   "backup.sent_successfully.message": "Sauvegarde envoyée avec succès",

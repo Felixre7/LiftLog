@@ -60,6 +60,10 @@ import { msDescription } from '@material-symbols-react-native/outlined-400/msDes
 import { msDescriptionFill } from '@material-symbols-react-native/outlined-400/msDescriptionFill';
 import { msVpnKey } from '@material-symbols-react-native/outlined-400/msVpnKey';
 import { msVpnKeyFill } from '@material-symbols-react-native/outlined-400/msVpnKeyFill';
+import { msCloudUploadFill } from '@material-symbols-react-native/outlined-400/msCloudUploadFill';
+import { msDnsFill } from '@material-symbols-react-native/outlined-400/msDnsFill';
+import { msBoltFill } from '@material-symbols-react-native/outlined-400/msBoltFill';
+import { msDns } from '@material-symbols-react-native/outlined-400/msDns';
 import { msPublic } from '@material-symbols-react-native/outlined-400/msPublic';
 import { msPublicFill } from '@material-symbols-react-native/outlined-400/msPublicFill';
 import { msPhysicalTherapy } from '@material-symbols-react-native/outlined-400/msPhysicalTherapy';
@@ -122,6 +126,7 @@ import { msAssignmentTurnedIn } from '@material-symbols-react-native/outlined-40
 import { msTerminal } from '@material-symbols-react-native/outlined-400/msTerminal';
 import { msTrendingUp } from '@material-symbols-react-native/outlined-400/msTrendingUp';
 import { msCampaign } from '@material-symbols-react-native/outlined-400/msCampaign';
+import { msVisibilityOff } from '@material-symbols-react-native/outlined-400/msVisibilityOff';
 
 // Importing these icons using the below methods causes android app to crash
 // import { msAdd, msArrowDownward } from '@material-symbols-react-native/outlined-400';
@@ -151,6 +156,7 @@ const MaterialSymbols = {
   history: msHistory,
   info: msInfo,
   visibility: msVisibility,
+  visibilityOff: msVisibilityOff,
   minus: msRemove,
   trendingUp: msTrendingUp,
   moreHoriz: msMoreHoriz,
@@ -199,6 +205,10 @@ const MaterialSymbols = {
   stop: msStop,
   replay: msReplay,
   vpnKeyFill: msVpnKeyFill,
+  cloudUploadFill: msCloudUploadFill,
+  dnsFill: msDnsFill,
+  boltFill: msBoltFill,
+  dns: msDns,
   share: Platform.select({
     ios: msIosShare,
     android: msShare,

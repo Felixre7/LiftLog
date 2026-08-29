@@ -22,7 +22,7 @@
   "backup.reminder.body": "Es ist eine Weile seit dem letzten Backup her. Es wird DRINGEND empfohlen, Daten regelmäßg zu sichern, um Datenverluste zu vermeiden. Möchtest du deine Daten jetzt sichern?",
   "backup.reminders.subtitle": "Regelmäßig eine Sicherung vorschlagen, wenn längere Zeit keine Sicherung erstellt wurde",
   "backup.reminders.title": "Backup-Erinnerungen",
-  "backup.remote.explanation": "Dies ist eine forgeschrittene Funktion, welche es LiftLog erlaubt, Backups an einen Remote-Server zu senden.<br>Bitte lese die Dokumentation um zu erfahren, wie diese Funktion genutzt werden kann.",
+  "backup.remote.explanation": "Dies ist eine forgeschrittene Funktion, welche es LiftLog erlaubt, Backups an einen Remote-Server zu senden.",
   "backup.restore_data.subtitle": "Daten von einer Datei wiederherstellen",
   "backup.restore_data.title": "Daten wiederherstellen",
   "backup.sent_successfully.message": "Sicherung wurde erfolgreich gesendet",

@@ -22,7 +22,7 @@
   "backup.reminder.body": "Prošlo je neko vreme od kada ste poslednji put napravili rezervnu kopiju. Preporučuje se DA REDOVNO pravite rezervnu kopiju svojih podataka kako biste sprečili gubitak podataka. Da li biste želeli da napravite rezervnu kopiju podataka?",
   "backup.reminders.subtitle": "Periodično predložiti pravljenje rezervne kopije kada niste pravili rezervnu kopiju neko vreme",
   "backup.reminders.title": "Napravite rezervnu kopiju podsetnika",
-  "backup.remote.explanation": "Ovo je napredna funkcija koja omogućava da LiftLog salje rezervne kopije na udaljenom serveru.<br>Molimo vas pročitajte dokumentaciju kako da postavite udaljeni server.",
+  "backup.remote.explanation": "Ovo je napredna funkcija koja omogućava da LiftLog salje rezervne kopije na udaljenom serveru.",
   "backup.restore_data.subtitle": "Uvezite podatke iz datoteke kako biste ih vratili",
   "backup.restore_data.title": "Vrati podatke",
   "backup.sent_successfully.message": "Rezervna kopija uspešno podeljena",

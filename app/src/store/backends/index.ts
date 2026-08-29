@@ -7,6 +7,7 @@ import {
   BackendId,
   backendSupportsFeature,
   builtInBackendId,
+  isBackendComplete,
   ResolvedBackendForFeature,
 } from '@/models/backend';
 import { apiBaseUrl } from '@/services/api-consts';
@@ -109,7 +110,8 @@ export const selectAllBackends = createSelector(selectUserBackends, (backends): 
 export const selectAllowedBackendsForFeature = createSelector(
   selectAllBackends,
   (_: BackendsRootState, feature: BackendFeature) => feature,
-  (backends, feature) => backends.filter((backend) => backendSupportsFeature(backend, feature)),
+  (backends, feature) =>
+    backends.filter((backend) => backendSupportsFeature(backend, feature) && isBackendComplete(backend)),
 );
 
 function backendFor(

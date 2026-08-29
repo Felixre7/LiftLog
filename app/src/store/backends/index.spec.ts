@@ -22,6 +22,7 @@ const bareBackupServer: Backend = {
 function stateWith(overrides: Partial<RootState['backends']> = {}): RootState {
   return {
     backends: { backends: [], assignments: {}, isHydrated: true, ...overrides },
+    settings: { proToken: 'hi' },
   } as RootState;
 }
 

@@ -22,7 +22,7 @@
   "backup.reminder.body": "Det var ett tag sedan du skapade en säkerhetskopia. Det är STARKT rekommenderat att du säkerhetskopierar din data regelbundet för att förebygga förlust av data. Vill du göra en säkerhetskopia nu?",
   "backup.reminders.subtitle": "Rekommendera regelbundna säkerhetskopieringar när det är länge sedan du säkerhetskopierade",
   "backup.reminders.title": "Påminnelser för säkerhetskopior",
-  "backup.remote.explanation": "Det här är en avancerad funktion som gör att LiftLog kan skicka säkerhetskopior till en fjärrserver. <br> Läs dokumentationer för instruktionen om hur du kan skapa en fjärrserver.",
+  "backup.remote.explanation": "Det här är en avancerad funktion som gör att LiftLog kan skicka säkerhetskopior till en fjärrserver.",
   "backup.restore_data.subtitle": "Importera data från en fil för att återställa",
   "backup.restore_data.title": "Återställ data",
   "backup.sent_successfully.message": "Lyckades skicka säkerhetskopia",

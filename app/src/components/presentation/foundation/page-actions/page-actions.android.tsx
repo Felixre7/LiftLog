@@ -41,17 +41,17 @@ export function PageActions({
 
   const surfaceActions = secondary.length ? (
     <HorizontalFloatingToolbar variant="standard">
-      <HorizontalFloatingToolbar.FloatingActionButton onPress={primary.onPress}>
+      <HorizontalFloatingToolbar.FloatingActionButton onPress={() => (primary.disabled ? 0 : primary.onPress())}>
         {primaryIcon}
       </HorizontalFloatingToolbar.FloatingActionButton>
       {secondary.map((action) => (
-        <TextButton key={action.label} onClick={action.onPress}>
+        <TextButton key={action.label} onClick={action.onPress} enabled={!action.disabled}>
           {label(action, 20)}
         </TextButton>
       ))}
     </HorizontalFloatingToolbar>
   ) : (
-    <ExtendedFloatingActionButton onClick={primary.onPress} expanded={primaryExpanded}>
+    <ExtendedFloatingActionButton onClick={() => (primary.disabled ? 0 : primary.onPress())} expanded={primaryExpanded}>
       <ExtendedFloatingActionButton.Icon>{primaryIcon}</ExtendedFloatingActionButton.Icon>
       <ExtendedFloatingActionButton.Text>
         <Text>{primary.label}</Text>
@@ -74,11 +74,16 @@ export function PageActions({
         ) : (
           <Row horizontalArrangement={{ spacedBy: spacing[2] }} verticalAlignment="center">
             {secondary.map((action) => (
-              <TextButton key={action.label} onClick={action.onPress}>
+              <TextButton key={action.label} enabled={!action.disabled} onClick={action.onPress}>
                 {label(action, 18)}
               </TextButton>
             ))}
-            <Button onClick={primary.onPress} shape={Shape.Pill({})} contentPadding={contentPadding}>
+            <Button
+              onClick={primary.onPress}
+              enabled={!primary.disabled}
+              shape={Shape.Pill({})}
+              contentPadding={contentPadding}
+            >
               {label(primary, 18)}
             </Button>
           </Row>

@@ -19,6 +19,7 @@ import {
   dedupeBuiltInExercises,
   dedupeBuiltInExercisesDataMigration,
 } from '@/services/data-migrations/dedupe-builtin-exercises';
+import { importBackends, importBackendsDataMigration } from '@/services/data-migrations/import-backends';
 import {
   seedBackendAssignments,
   seedBackendAssignmentsDataMigration,
@@ -60,6 +61,9 @@ export class DatabaseImportService implements DatabaseImporter {
     }
     if (!dataMigrationsRun.includes(dedupeBuiltInExercisesDataMigration)) {
       await dedupeBuiltInExercises(this.db, this.keyValueStore);
+    }
+    if (!dataMigrationsRun.includes(importBackendsDataMigration)) {
+      await importBackends(this.db, this.preferenceService);
     }
     if (!dataMigrationsRun.includes(seedBackendAssignmentsDataMigration)) {
       await seedBackendAssignments(this.db);

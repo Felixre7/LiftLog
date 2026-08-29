@@ -7,7 +7,6 @@ import {
   setLastBackup,
   setPreferredLanguage,
   setProToken,
-  setRemoteBackupSettings,
 } from '@/store/settings';
 import {
   buildPreferenceAction,
@@ -29,6 +28,7 @@ import { I18nManager, Platform } from 'react-native';
 import { detectLanguageFromDateLocale } from '@/utils/language-detector';
 import { supportedLanguages } from '@/services/tolgee';
 import { initializeStoredSessionsStateSlice } from '@/store/stored-sessions';
+import { builtInBackendId } from '@/models/backend';
 
 // Read every generically-hydrated key, then dispatch its setter.
 async function hydrateGenericPreferences(
@@ -58,12 +58,10 @@ export function applySettingsEffects(addEffect: AddEffectFn) {
       // Bespoke hydration: sync read, composite keys, and composed values.
       dispatch(setPreferredLanguage(preferenceService.getPreferredLanguage()));
 
-      const remoteBackupSettings = await preferenceService.getRemoteBackupSettings();
-      dispatch(setRemoteBackupSettings(remoteBackupSettings));
-
-      const [lastSuccessfulRemoteBackupHash, lastBackupTime] = await Promise.all([
+      const [lastSuccessfulRemoteBackupHash, lastBackupTime, lastBackupBackendId] = await Promise.all([
         preferenceService.getLastSuccessfulRemoteBackupHash(),
         preferenceService.getLastBackupTime(),
+        preferenceService.getLastBackupBackendId(),
       ]);
       dispatch(
         setLastBackup(
@@ -71,7 +69,7 @@ export function applySettingsEffects(addEffect: AddEffectFn) {
             ? RemoteData.success({
                 lastSuccessfulRemoteBackupHash: lastSuccessfulRemoteBackupHash,
                 lastBackupTime: lastBackupTime,
-                settings: remoteBackupSettings,
+                backendId: lastBackupBackendId ?? builtInBackendId,
               })
             : RemoteData.notAsked(),
         ),
@@ -155,16 +153,11 @@ export function applySettingsEffects(addEffect: AddEffectFn) {
     }
   });
 
-  addEffect(setRemoteBackupSettings, async (action, { stateAfterReduce, extra: { preferenceService } }) => {
-    if (stateAfterReduce.settings.isHydrated) {
-      await preferenceService.setRemoteBackupSettings(action.payload);
-    }
-  });
-
   addEffect(setLastBackup, async (action, { stateAfterReduce, extra: { preferenceService } }) => {
     if (stateAfterReduce.settings.isHydrated && action.payload.isSuccess()) {
       await preferenceService.setLastBackupTime(action.payload.data.lastBackupTime);
       await preferenceService.setLastSuccessfulRemoteBackupHash(action.payload.data.lastSuccessfulRemoteBackupHash);
+      await preferenceService.setLastBackupBackendId(action.payload.data.backendId);
     }
   });
 

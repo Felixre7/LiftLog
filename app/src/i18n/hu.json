@@ -22,7 +22,7 @@
   "backup.reminder.body": "Egy ideje nem készítettél biztonsági másolatot. Az adatvesztés elkerülése érdekében NAGYON ajánlott, hogy rendszeresen készíts biztonsági másolatot az adataidról. Szeretnél most biztonsági másolatot készíteni az adataidról?",
   "backup.reminders.subtitle": "Ha már egy ideje nem készítettél biztonsági másolatot, rendszeresen javasolja biztonsági másolat készítését",
   "backup.reminders.title": "Biztonsági mentésre vonatkozó emlékeztetők",
-  "backup.remote.explanation": "Ez egy speciális funkció, amely lehetővé teszi a LiftLog számára, hogy biztonsági másolatokat küldjön egy távoli szerverre.<br>A távoli szerver beállításával kapcsolatos utasításokat a dokumentációban találja.",
+  "backup.remote.explanation": "Ez egy speciális funkció, amely lehetővé teszi a LiftLog számára, hogy biztonsági másolatokat küldjön egy távoli szerverre.",
   "backup.restore_data.subtitle": "Adatok importálása fájlból a visszaállításhoz",
   "backup.restore_data.title": "Adatok visszaállítása",
   "backup.sent_successfully.message": "A biztonsági mentés elküldése sikeresen megtörtént",

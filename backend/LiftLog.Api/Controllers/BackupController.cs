@@ -10,7 +10,8 @@ namespace LiftLog.Api.Controllers;
 [ApiController]
 [Route("[controller]")]
 [FeatureCheck(Feature.Backup)]
-public class BackupController(IBackupSink? backupSink = null) : ControllerBase
+public class BackupController(ILogger<BackupController> logger, IBackupSink? backupSink = null)
+    : ControllerBase
 {
     /// <summary>
     /// The app checks a backup target by posting an empty body with this header. Answer it, but do
@@ -22,14 +23,15 @@ public class BackupController(IBackupSink? backupSink = null) : ControllerBase
     [HttpPost]
     public async Task<IResult> Post()
     {
-        if (backupSink is null)
-        {
-            return Results.UnprocessableEntity();
-        }
         var user = User.Identity?.Name;
         if (string.IsNullOrWhiteSpace(user))
         {
             return Results.Unauthorized();
+        }
+        if (backupSink is null)
+        {
+            logger.LogWarning("Backup attempted, however no backup sink registered");
+            return Results.UnprocessableEntity();
         }
 
         if (Request.Headers.ContainsKey(ProbeHeaderName))

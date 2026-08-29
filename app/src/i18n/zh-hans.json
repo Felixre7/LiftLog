@@ -23,7 +23,7 @@
   "backup.reminder.body": "距离上次备份已过去较久，强烈建议定期进行备份防止数据丢失。是否现在进行备份操作？",
   "backup.reminders.subtitle": "长时间未备份时定期提醒备份",
   "backup.reminders.title": "备份提醒",
-  "backup.remote.explanation": "该进阶功能可令LiftLog备份数据至远程服务器。<br>请参阅文档了解如何配置远程服务器。",
+  "backup.remote.explanation": "该进阶功能可令LiftLog备份数据至远程服务器。",
   "backup.restore_data.subtitle": "从文件恢复数据",
   "backup.restore_data.title": "恢复数据",
   "backup.sent_successfully.message": "成功传输备份数据",

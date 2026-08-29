@@ -72,7 +72,8 @@ export class PreferenceService {
       : this.keyValueStore.removeItem('preferredLanguage');
   }
 
-  // One field spread across three storage keys.
+  // Legacy: one field spread across three storage keys, superseded by the `backend` tables. Read
+  // once by the IMPORT_BACKENDS data migration. The keys are deliberately left on disk.
   async getRemoteBackupSettings(): Promise<RemoteBackupSettings> {
     const [endpoint, apiKey, includeFeedAccount] = await Promise.all([
       this.keyValueStore.getItem('remoteBackupSettings.Endpoint'),
@@ -86,21 +87,20 @@ export class PreferenceService {
     };
   }
 
-  async setRemoteBackupSettings(settings: RemoteBackupSettings): Promise<void> {
-    await this.keyValueStore.setItem('remoteBackupSettings.Endpoint', settings.endpoint);
-    await this.keyValueStore.setItem('remoteBackupSettings.ApiKey', settings.apiKey);
-    await this.keyValueStore.setItem(
-      'remoteBackupSettings.IncludeFeedAccount',
-      boolCodec.serialize(settings.includeFeedAccount)!,
-    );
-  }
-
   setLastSuccessfulRemoteBackupHash(hash: string): Promise<void> {
     return this.keyValueStore.setItem('lastSuccessfulRemoteBackupHash', hash);
   }
 
   async getLastSuccessfulRemoteBackupHash(): Promise<string | undefined> {
     return (await this.keyValueStore.getItem('lastSuccessfulRemoteBackupHash')) ?? undefined;
+  }
+
+  setLastBackupBackendId(backendId: string): Promise<void> {
+    return this.keyValueStore.setItem('lastBackupBackendId', backendId);
+  }
+
+  async getLastBackupBackendId(): Promise<string | undefined> {
+    return (await this.keyValueStore.getItem('lastBackupBackendId')) ?? undefined;
   }
 
   setLastBackupTime(time: Instant): Promise<void> {

@@ -22,7 +22,7 @@
   "backup.reminder.body": "Viimeisestä varmuuskopioinnista on kulunut aikaa. On ERITTÄIN suositeltavaa varmuuskopioida tiedot säännöllisesti tietojen menetyksen estämiseksi. Haluatko varmuuskopioida tiedot nyt?",
   "backup.reminders.subtitle": "Ehdota varmuuskopiointia kun et ole hetkeen tehnyt varmuuskopiota",
   "backup.reminders.title": "Varmuuskopio muistutukset",
-  "backup.remote.explanation": "Tämä on edistynyt ominaisuus, joka mahdollistaa LiftLogin varmuuskopioiden lähettämisen etäpalvelimelle.<br>Lue dokumentaatiosta ohjeet etäpalvelimen määrittämiseen.",
+  "backup.remote.explanation": "Tämä on edistynyt ominaisuus, joka mahdollistaa LiftLogin varmuuskopioiden lähettämisen etäpalvelimelle.",
   "backup.restore_data.subtitle": "Tuo tiedot tiedostosta palauttamista varten",
   "backup.restore_data.title": "Palauta tiedot",
   "backup.sent_successfully.message": "Varmuuskopio lähetetty onnistuneesti",

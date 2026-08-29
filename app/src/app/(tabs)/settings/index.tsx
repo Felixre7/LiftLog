@@ -70,6 +70,13 @@ export default function Settings() {
         ></List.Item>
 
         <List.Item
+          onPress={() => push('/settings/backends')}
+          title={t('backends.title')}
+          description={t('backends.subtitle')}
+          left={(props) => <List.Icon icon={'dns'} {...props} />}
+        ></List.Item>
+
+        <List.Item
           onPress={() => push('/settings/backup-and-restore')}
           title={t('backup.export_backup_restore.title')}
           description={t('backup.export_backup_restore.subtitle')}

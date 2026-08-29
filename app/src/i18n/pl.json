@@ -22,7 +22,7 @@
   "backup.reminder.body": "Od dawna nie utworzyłeś kopii zapasowej swoich danych. Zdecydowanie zalecamy REGULARNE tworzenie kopii zapasowych, aby zapobiec ich utracie. Czy chcesz ją teraz utworzyć?",
   "backup.reminders.subtitle": "Przypominaj mi o tworzeniu kopii zapasowej, gdy dawno jej nie wykonywałeś",
   "backup.reminders.title": "Przypomnienia o kopii zapasowej",
-  "backup.remote.explanation": "Jest to zaawansowana funkcja umożliwiająca aplikacji LiftLog wysyłanie kopii zapasowych na serwer zdalny.<br>Przeczytaj dokumentację, aby uzyskać instrukcje dotyczące konfiguracji serwera zdalnego.",
+  "backup.remote.explanation": "Jest to zaawansowana funkcja umożliwiająca aplikacji LiftLog wysyłanie kopii zapasowych na serwer zdalny.",
   "backup.restore_data.subtitle": "Importuj dane z pliku w celu ich przywrócenia",
   "backup.restore_data.title": "Przywróć dane",
   "backup.sent_successfully.message": "Kopia zapasowa została pomyślnie wysłana",

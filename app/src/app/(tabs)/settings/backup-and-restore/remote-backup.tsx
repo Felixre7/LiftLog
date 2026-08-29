@@ -1,132 +1,101 @@
-import EmptyInfo from '@/components/presentation/foundation/empty-info';
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import Form from '@/components/presentation/foundation/form';
-import LabelledFormRow from '@/components/presentation/foundation/labelled-form-row';
 import LimitedHtml from '@/components/presentation/foundation/limited-html';
-import ListSwitch from '@/components/presentation/foundation/list-switch';
 import { spacing } from '@/hooks/useAppTheme';
 import { useAppSelector } from '@/store';
-import { showSnackbar } from '@/store/app';
-import { executeRemoteBackup, setRemoteBackupSettings } from '@/store/settings';
-import { T, useTranslate } from '@tolgee/react';
-import { Stack } from 'expo-router';
-import { useState } from 'react';
+import { executeRemoteBackup, setBackupIncludeFeedAccount } from '@/store/settings';
+import { useTranslate } from '@tolgee/react';
+import { Stack, useRouter } from 'expo-router';
 import { Linking, View } from 'react-native';
-import { Card, HelperText, TextInput } from 'react-native-paper';
-import Button from '@/components/presentation/foundation/button';
 import { useDispatch } from 'react-redux';
+import { FormRow } from '@/components/presentation/foundation/form-row';
+import { SegmentedList, SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
+import { SegmentedListSwitch } from '@/components/presentation/foundation/segmented-list-switch';
+import { SurfaceText } from '@/components/presentation/foundation/surface-text';
+import Icon from '@/components/presentation/foundation/icon';
+import ExperimentIcon from '@expo/material-symbols/experiment.xml';
+import { PageActions } from '@/components/presentation/foundation/page-actions';
+import { BackendPicker } from '@/components/smart/backend-picker';
+import DnsIcon from '@expo/material-symbols/dns.xml';
+
+const docsUrl = 'https://github.com/LiamMorrow/LiftLog/blob/main/docs/RemoteBackup.md';
 
 export default function RemoteBackupPage() {
   const { t } = useTranslate();
   const dispatch = useDispatch();
-  const { apiKey, endpoint, includeFeedAccount } = useAppSelector((s) => s.settings.remoteBackupSettings);
+  const router = useRouter();
+  const includeFeedAccount = useAppSelector((s) => s.settings.backupIncludeFeedAccount);
+  const assignedBackend = useAppSelector((s) => s.backends.assignments.backup);
   const openUrl = (url: string) => {
     void Linking.canOpenURL(url).then(() => Linking.openURL(url));
   };
-  const [endpointValue, setEndpoint] = useState(endpoint);
-  const [apiKeyValue, setApiKey] = useState(apiKey);
-  const [includeFeedAccountValue, setIncludeFeedAccount] = useState(includeFeedAccount);
-  const [endpointError, setEndpointError] = useState('');
-
-  const updateEndpoint = (e: string) => {
-    if (e && !e.startsWith('https://')) {
-      setEndpointError('Endpoint must start with https://');
-    } else {
-      setEndpointError('');
-    }
-    setEndpoint(e);
-  };
-
-  const save = () => {
-    if (endpointError) {
-      return;
-    }
-    dispatch(
-      setRemoteBackupSettings({
-        endpoint: endpointValue,
-        apiKey: apiKeyValue,
-        includeFeedAccount: includeFeedAccountValue,
-      }),
-    );
-    dispatch(
-      showSnackbar({
-        text: t('settings.saved.message'),
-        duration: 2000,
-      }),
-    );
-  };
-
-  const test = () => {
-    dispatch(
-      executeRemoteBackup({
-        settings: {
-          endpoint: endpointValue,
-          apiKey: apiKeyValue,
-          includeFeedAccount: includeFeedAccountValue,
-        },
-        force: true,
-      }),
-    );
-  };
 
   return (
-    <FullHeightScrollView avoidKeyboard>
-      <Stack.Screen options={{ title: t('backup.automatic_remote.title') }} />
-      <Card mode="contained" style={{ marginHorizontal: spacing[6], marginBottom: spacing[4] }}>
-        <Card.Content>
-          <EmptyInfo>
-            <LimitedHtml style={{ textAlign: 'center' }} value={t('backup.remote.explanation')} />
-          </EmptyInfo>
-
-          <Button onPress={() => openUrl('https://github.com/LiamMorrow/LiftLog/blob/main/docs/RemoteBackup.md')}>
-            <T keyName="generic.read_documentation.button" />
-          </Button>
-        </Card.Content>
-      </Card>
-      <Form>
-        <LabelledFormRow label={t('backup.endpoint.label')} icon={'publicFill'}>
-          <TextInput
-            mode="outlined"
-            placeholder="https://example.com/backup"
-            value={endpointValue}
-            error={!!endpointError}
-            onChangeText={updateEndpoint}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          <HelperText type="error">{endpointError}</HelperText>
-        </LabelledFormRow>
-        <LabelledFormRow label={t('backup.api_key.label')} icon={'vpnKeyFill'}>
-          <TextInput
-            mode="outlined"
-            value={apiKeyValue}
-            onChangeText={setApiKey}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-        </LabelledFormRow>
-        <ListSwitch
-          headline={t('feed.backup_account.title')}
-          supportingText={t('feed.backup_account.subtitle')}
-          value={includeFeedAccountValue}
-          onValueChange={setIncludeFeedAccount}
+    <FullHeightScrollView
+      avoidKeyboard
+      floatingChildren={
+        <PageActions
+          primary={{
+            label: t('generic.test.button'),
+            onPress: () => dispatch(executeRemoteBackup({ force: true })),
+            icon: ExperimentIcon,
+            systemImage: 'flask',
+            disabled: !assignedBackend,
+          }}
+          secondary={[
+            {
+              label: t('backends.manage.button'),
+              onPress: () => router.push('/settings/backends'),
+              icon: DnsIcon,
+              systemImage: 'server.rack',
+            },
+          ]}
         />
-      </Form>
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'flex-end',
-          gap: spacing[4],
-          margin: spacing[6],
-        }}
-      >
-        <Button disabled={!!endpointError} onPress={test}>
-          <T keyName="generic.test.button" />
-        </Button>
-        <Button disabled={!!endpointError} onPress={save}>
-          <T keyName="generic.save.button" />
-        </Button>
+      }
+    >
+      <Stack.Screen options={{ title: t('backup.automatic_remote.title') }} />
+      <View style={{ marginHorizontal: spacing.pageHorizontalMargin, marginBottom: spacing[4] }}>
+        <SurfaceText color="onSurfaceVariant" font="text-sm">
+          <LimitedHtml value={t('backup.remote.explanation')} />
+        </SurfaceText>
       </View>
+      <Form>
+        <FormRow>
+          <SegmentedList
+            renderItem={(x) => x}
+            items={[
+              <SegmentListFormElement
+                key={0}
+                label={t('backends.backup.label')}
+                icon={'cloudUploadFill'}
+                right={<BackendPicker feature="backup" />}
+              />,
+              <SegmentedListSwitch
+                key={1}
+                label={t('feed.backup_account.title')}
+                supportingText={t('feed.backup_account.subtitle')}
+                icon={'vpnKeyFill'}
+                value={includeFeedAccount}
+                onValueChange={(value) => dispatch(setBackupIncludeFeedAccount(value))}
+              />,
+            ]}
+          />
+        </FormRow>
+        <FormRow>
+          <SegmentedList
+            renderItem={(x) => x}
+            items={[
+              <SegmentListFormElement
+                key={0}
+                label={t('generic.read_documentation.button')}
+                icon={'description'}
+                onPress={() => openUrl(docsUrl)}
+                right={<Icon source="openInBrowser" size={20} />}
+              />,
+            ]}
+          />
+        </FormRow>
+      </Form>
     </FullHeightScrollView>
   );
 }

@@ -1,3 +1,4 @@
+import { BackendId } from '@/models/backend';
 import { RemoteData } from '@/models/remote';
 import { DayOfWeek, Instant } from '@js-joda/core';
 import { ActionCreatorWithPreparedPayload, createAction, UnknownAction } from '@reduxjs/toolkit';
@@ -13,6 +14,7 @@ import {
   themeModeCodec,
 } from './codecs';
 
+/** Legacy shape, read once by the `IMPORT_BACKENDS` data migration and never written again. */
 export interface RemoteBackupSettings {
   endpoint: string;
   apiKey: string;
@@ -22,7 +24,8 @@ export interface RemoteBackupSettings {
 export interface LastBackup {
   lastSuccessfulRemoteBackupHash: string;
   lastBackupTime: Instant;
-  settings: RemoteBackupSettings;
+  /** Which backend received it, so repointing backup uploads again instead of matching the hash. */
+  backendId: BackendId;
 }
 
 /**
@@ -91,12 +94,7 @@ export const preferenceRegistry = {
     hydrate: 'manual',
   }),
 
-  // Fully bespoke: one state field spread across three storage keys.
-  remoteBackupSettings: pref<RemoteBackupSettings>({
-    default: { endpoint: '', apiKey: '', includeFeedAccount: false },
-    persist: false,
-    hydrate: 'manual',
-  }),
+  backupIncludeFeedAccount: pref({ default: false, codec: boolCodec }),
 
   // Fully bespoke: composed from two keys + settings, persisted only on success.
   lastBackup: pref<RemoteData<LastBackup, string>>({

@@ -1,3 +1,6 @@
+import { toBase64, fromBase64 } from '@/utils/base64';
+import { TranslationKey } from '@tolgee/react';
+
 export type BackendId = string;
 
 /**
@@ -8,6 +11,16 @@ export type BackendId = string;
 export type BackendKind = 'liftlog' | 'backupEndpoint';
 
 export type BackendFeature = 'feed' | 'aiPlanner' | 'backup';
+
+/** Everything `/features` can report, including `sharing`, which no app feature is assigned to. */
+export type ReportedBackendFeature = BackendFeature | 'sharing';
+
+export const backendFeatureNameKey: Record<ReportedBackendFeature, TranslationKey> = {
+  feed: 'backends.feature.feed',
+  sharing: 'backends.feature.sharing',
+  aiPlanner: 'backends.feature.ai_planner',
+  backup: 'backends.feature.backup',
+};
 
 export const backendFeatures: BackendFeature[] = ['feed', 'aiPlanner', 'backup'];
 
@@ -66,6 +79,32 @@ export function featuresUrl(backend: Backend): string {
   return `${backend.url}/features`;
 }
 
+export function backendUrlIsValid(url: string): boolean {
+  return /^https?:\/\/.+/.test(url.trim());
+}
+
+/** An incomplete backend is one nothing could be asked of, so no feature is allowed to point at it. */
+export function isBackendComplete(backend: Backend): boolean {
+  return !!backend.name.trim() && backendUrlIsValid(backend.url);
+}
+
 export function normalizeBackendUrl(url: string): string {
   return url.trim().replace(/\/+$/, '');
+}
+
+export function basicAuthHeaderValue(username: string, password: string): string {
+  return `Basic ${toBase64(`${username}:${password}`)}`;
+}
+
+export function parseBasicAuthHeaderValue(value: string): { username: string; password: string } | undefined {
+  const encoded = /^Basic\s+(\S+)$/i.exec(value.trim())?.[1];
+  const decoded = encoded ? fromBase64(encoded) : undefined;
+  if (decoded === undefined) {
+    return undefined;
+  }
+  const separator = decoded.indexOf(':');
+  if (separator < 0) {
+    return undefined;
+  }
+  return { username: decoded.slice(0, separator), password: decoded.slice(separator + 1) };
 }
