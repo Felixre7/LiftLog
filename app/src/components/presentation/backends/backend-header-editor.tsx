@@ -9,7 +9,6 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Chip, Dialog, Portal, Text, TextInput } from 'react-native-paper';
-import { AppIconSource } from '@/components/presentation/foundation/ms-icon-source';
 
 const commonHeaderNames = ['Authorization', 'X-API-Key'];
 
