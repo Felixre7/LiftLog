@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Backend } from '@/models/backend';
-import { builtInBackend, selectIsFeatureOnBuiltInBackend, selectBackendForFeature } from '@/store/backends';
+import { builtInBackend, selectBackendForFeature } from '@/store/backends';
 import type { RootState } from '@/store/store';
 
 const selfHosted: Backend = {
@@ -80,15 +80,5 @@ describe('selectResolvedBackend', () => {
       selectBackendForFeature(stateWith({ backends: [bareBackupServer], assignments: { backup: 'bare' } }), 'backup')
         ?.backend.id,
     ).toBe('bare');
-  });
-});
-
-describe('selectIsFeatureOnBuiltInBackend', () => {
-  it('is true only while the feature is on ours', () => {
-    expect(selectIsFeatureOnBuiltInBackend(stateWith({ assignments: { feed: builtInBackend.id } }), 'feed')).toBe(true);
-    expect(selectIsFeatureOnBuiltInBackend(stateWith(), 'feed')).toBe(false);
-
-    const state = stateWith({ backends: [selfHosted], assignments: { feed: 'self' } });
-    expect(selectIsFeatureOnBuiltInBackend(state, 'feed')).toBe(false);
   });
 });

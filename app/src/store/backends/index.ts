@@ -2,13 +2,15 @@ import {
   Backend,
   BackendAssignments,
   BackendFeature,
+  BackendHeader,
   backendHeaderRecord,
   BackendId,
   backendSupportsFeature,
   builtInBackendId,
-  ResolvedBackend,
+  ResolvedBackendForFeature,
 } from '@/models/backend';
 import { apiBaseUrl } from '@/services/api-consts';
+import { SettingsRootState } from '@/store/settings';
 import { createAction, createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 /** Not stored in the slice - it is not something the user created, and it cannot be edited away. */
@@ -17,7 +19,7 @@ export const builtInBackend: Backend = {
   name: 'LiftLog',
   url: apiBaseUrl,
   kind: 'liftlog',
-  headers: __DEV__ ? [{ name: 'X-API-Key', value: 'test-web-auth-key-12345' }] : [],
+  headers: [],
 };
 
 interface BackendsState {
@@ -130,24 +132,37 @@ export const selectBackendForFeature = createSelector(
   selectAllBackends,
   selectBackendAssignments,
   selectBackendsAreHydrated,
+  (state: SettingsRootState) => state.settings.proToken,
   (_: BackendsRootState, feature: BackendFeature) => feature,
-  (backends, assignments, isHydrated, feature): ResolvedBackend | undefined => {
+  (backends, assignments, isHydrated, proToken, feature): ResolvedBackendForFeature | undefined => {
     const backend = isHydrated ? backendFor(backends, assignments, feature) : undefined;
     if (!backend) {
       return undefined;
     }
+    const isBuiltIn = backend.id === builtInBackendId;
+    const usesProToken = isBuiltIn && feature === 'aiPlanner';
+    const requiresProToken = usesProToken && !proToken;
     return {
       backend,
       url: backend.url,
-      headers: backendHeaderRecord(backend),
+      requiresPro: requiresProToken,
+      headers: backendHeaderRecord({
+        ...backend,
+        headers: [...backend.headers, ...(usesProToken ? getProTokenHeaders(proToken) : [])],
+      }),
       isBuiltIn: backend.id === builtInBackendId,
     };
   },
 );
 
-export const selectIsFeatureOnBuiltInBackend = createSelector(
-  selectBackendForFeature,
-  (resolved) => resolved?.isBuiltIn === true,
-);
-
 export const backendsReducer = backendsSlice.reducer;
+
+function getProTokenHeaders(proToken: string | undefined): BackendHeader[] {
+  if (!proToken) {
+    return [];
+  }
+  if (__DEV__) {
+    return [{ name: 'X-API-Key', value: proToken }];
+  }
+  return [{ name: 'Authorization', value: 'Bearer ' + proToken }];
+}

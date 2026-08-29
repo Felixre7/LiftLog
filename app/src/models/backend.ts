@@ -30,12 +30,13 @@ export interface Backend {
 
 export type BackendAssignments = Partial<Record<BackendFeature, BackendId>>;
 
-/** A backend, plus everything a caller needs to actually talk to it for one feature. */
-export interface ResolvedBackend {
+export interface ResolvedBackendForFeature {
   backend: Backend;
   url: string;
+  // Contains the headers for the backend, plus the pro token header if necessary
   headers: Record<string, string>;
   isBuiltIn: boolean;
+  requiresPro: boolean;
 }
 
 export const builtInBackendId = 'liftlog';

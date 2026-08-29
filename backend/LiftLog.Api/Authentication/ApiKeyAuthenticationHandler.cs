@@ -33,14 +33,14 @@ public class ApiKeyAuthenticationHandler(
             )
         )
         {
-            return AuthenticateResult.Fail("Missing X-API-Key header");
+            return AuthenticateResult.NoResult();
         }
 
         var authHeader = value.First();
         if (string.IsNullOrEmpty(authHeader))
         {
             _logger.LogWarning("Empty X-API-Key header");
-            return AuthenticateResult.Fail("Empty X-API-Key header");
+            return AuthenticateResult.NoResult();
         }
 
         if (authHeader != Options.ApiKey)

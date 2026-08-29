@@ -29,6 +29,8 @@ const initialState: SettingsState = {
   isHydrated: false,
 };
 
+/** What the exported selectors need off the root state. */
+export type SettingsRootState = { settings: SettingsState };
 const settingsSlice = createSlice({
   name: 'settings',
   initialState,

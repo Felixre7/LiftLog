@@ -1,20 +1,10 @@
-import { apiBaseUrl } from '@/services/api-consts';
+import { ResolvedBackendForFeature } from '@/models/backend';
 import { HubConnectionBuilder } from '@microsoft/signalr';
 
 export class HubConnectionFactory {
-  create(proToken: string, path: string) {
+  create(backend: ResolvedBackendForFeature, path: string) {
     const builder = new HubConnectionBuilder();
-    if (__DEV__) {
-      return builder
-        .withUrl(`${apiBaseUrl}${path}`, {
-          headers: { 'X-API-Key': 'test-web-auth-key-12345' },
-        })
-        .build();
-    }
-    return builder
-      .withUrl(`${apiBaseUrl}${path}`, {
-        accessTokenFactory: () => `RevenueCat ${proToken}`,
-      })
-      .build();
+    console.log(backend);
+    return builder.withUrl(`${backend.url}${path}`, { headers: backend.headers }).build();
   }
 }

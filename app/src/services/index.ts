@@ -34,7 +34,7 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
   const sessionService = new SessionService(progressRepository, store.getState);
   const notificationService = new NotificationService(store.getState, store.dispatch);
   const encryptionService = new EncryptionService();
-  const feedApiService = new FeedApiService();
+  const feedApiService = new FeedApiService(store.getState);
   const feedIdentityService = new FeedIdentityService(feedApiService, encryptionService);
   const feedInboxDecryptionService = new FeedInboxDecryptionService(encryptionService, feedApiService);
   const feedFollowService = new FeedFollowService(feedApiService, encryptionService);

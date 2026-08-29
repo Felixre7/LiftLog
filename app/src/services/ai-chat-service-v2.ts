@@ -1,10 +1,10 @@
 import { AiChatResponseV2, AiChatResponseV2Json, aiPlanFromJSON } from '@/models/ai-models';
 import { aiPlanMigrations } from '@/models/storage/versions/migrations';
-
 import { HubConnection, HubConnectionState } from '@microsoft/signalr';
 import { AsyncIterableSubject } from 'data-async-iterators';
 import { match, P } from 'ts-pattern';
 import { HubConnectionFactory } from '@/services/hub-connection-factory';
+import { selectBackendForFeature } from '@/store/backends';
 import { RootState } from '@/store';
 import Purchases from 'react-native-purchases';
 import { selectPreferredWeightUnit } from '@/store/settings';
@@ -20,15 +20,14 @@ export class AiChatServiceV2 {
   ) {}
 
   async *introduce(): AsyncIterableIterator<AiChatResponseV2> {
-    const proToken = this.getState().settings.proToken;
     const preferredWeightUnit = selectPreferredWeightUnit(this.getState());
-    if (!proToken) {
+    if (this.requiresPro()) {
       yield {
         type: 'purchasePro',
       };
       return;
     }
-    const subject = await this.setupResponseListening(proToken);
+    const subject = await this.setupResponseListening();
     void this.connection
       ?.invoke(
         'Introduce',
@@ -42,14 +41,13 @@ export class AiChatServiceV2 {
   }
 
   async *sendMessage(message: string): AsyncIterableIterator<AiChatResponseV2> {
-    const proToken = this.getState().settings.proToken;
-    if (!proToken) {
+    if (this.requiresPro()) {
       yield {
         type: 'purchasePro',
       };
       return;
     }
-    const subject = await this.setupResponseListening(proToken);
+    const subject = await this.setupResponseListening();
     void this.connection?.invoke('SendMessage', message, aiPlanMigrations.latestVersion).finally(() => subject.end());
     yield* subject;
     this.connection?.off('ReceiveMessage');
@@ -69,10 +67,23 @@ export class AiChatServiceV2 {
     }
   }
 
-  private async setupResponseListening(proToken: string) {
+  private requiresPro(): boolean {
+    return selectBackendForFeature(this.getState(), 'aiPlanner')?.requiresPro ?? true;
+  }
+
+  private async setupResponseListening() {
     const subject = new AsyncIterableSubject<AiChatResponseV2>();
+    const backend = selectBackendForFeature(this.getState(), 'aiPlanner');
+    if (!backend) {
+      subject.pushValue({
+        type: 'messageResponse',
+        message: 'No backend is configured for the AI planner.',
+      });
+      subject.end();
+      return subject;
+    }
     if (!this.connection) {
-      this.connection = this.hubConnectionFactory.create(proToken, '/ai-chat-v2');
+      this.connection = this.hubConnectionFactory.create(backend, '/ai-chat-v2');
 
       this.connection.onclose((e) => {
         this.connection = undefined;

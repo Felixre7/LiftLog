@@ -68,6 +68,7 @@ import { Logger } from '@/services/logger';
 import { toRecord } from '@/utils/reduce';
 import { FeedUserJSON } from '@/models/storage/versions/latest';
 import { sessionUserEventMigrations } from '@/models/storage/versions/migrations';
+import { setBackendAssignment, switchFeedBackend } from '@/store/backends';
 
 export function applyFeedEffects(addEffect: AddEffectFn) {
   addEffect(
@@ -324,6 +325,40 @@ export function applyFeedEffects(addEffect: AddEffectFn) {
         return;
       }
       dispatch(setIdentity(RemoteData.success(identityResult.data)));
+    },
+  );
+
+  // Repointing the feed is destructive by nature: the account, its followers and its follow secrets
+  // were all issued by the server holding them, and there is no federation to carry them across.
+  addEffect(
+    switchFeedBackend,
+    async (action, { dispatch, stateAfterReduce, extra: { feedIdentityService, logger } }) => {
+      const previous = selectFeedIdentityRemote(stateAfterReduce).match({
+        success: (identity) => identity,
+        error: () => undefined,
+        loading: () => undefined,
+        notAsked: () => undefined,
+      });
+
+      if (previous) {
+        const result = await feedIdentityService.deleteFeedIdentityAsync(previous);
+        // A server we can no longer reach must not strand the user on it - wipe locally regardless.
+        if (result.isError() && result.error.type !== ApiErrorType.NotFound) {
+          logger.warn('Could not delete the feed account on the previous backend', result.error);
+        }
+      }
+
+      dispatch(clearFeedState());
+      dispatch(setBackendAssignment({ feature: 'feed', backendId: action.payload.backendId }));
+      dispatch(
+        createFeedIdentity({
+          name: previous?.name,
+          publishBodyweight: previous?.publishBodyweight ?? false,
+          publishPlan: previous?.publishPlan ?? false,
+          publishWorkouts: previous?.publishWorkouts ?? false,
+          fromUserAction: true,
+        }),
+      );
     },
   );
 
