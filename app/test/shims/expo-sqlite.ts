@@ -106,8 +106,14 @@ function withSerialize(client: Client): Client & { serializeAsync: () => Promise
         } catch {}
       }
     },
+    // expo-sqlite's execAsync runs every statement in the string; libsql's execute runs only the
+    // first, which would silently skip all but the first DELETE in a cleanup block.
     execAsync: async (sql: string): Promise<void> => {
-      await client.execute(sql);
+      await client.executeMultiple(sql);
+    },
+    getAllAsync: async <T>(sql: string, params: unknown[] = []): Promise<T[]> => {
+      const result = await client.execute({ sql, args: params as never });
+      return result.rows as unknown as T[];
     },
   });
 }

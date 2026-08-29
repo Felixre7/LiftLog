@@ -1,6 +1,19 @@
 import { streamToUint8Array } from '@/utils/stream';
 import { backupDatabaseAsync, openDatabaseAsync, SQLiteDatabase } from 'expo-sqlite';
 
+// A source database can predate a table (an old export being re-exported), so clear only what is
+// actually there rather than letting one missing table fail the whole backup.
+async function clearTables(db: SQLiteDatabase, tables: string[]) {
+  const present = await db.getAllAsync<{ name: string }>(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (${tables.map(() => '?').join(', ')})`,
+    tables,
+  );
+  if (!present.length) {
+    return;
+  }
+  await db.execAsync(present.map(({ name }) => `DELETE FROM "${name}";`).join('\n'));
+}
+
 export async function getBackupBytes(options: { includeFeed: boolean; expoDb: SQLiteDatabase }) {
   const { expoDb, includeFeed } = options;
 
@@ -10,16 +23,19 @@ export async function getBackupBytes(options: { includeFeed: boolean; expoDb: SQ
       sourceDatabase: expoDb,
       destDatabase: backupDatabase,
     });
+    // Backend configuration never travels in a backup: the blob is plaintext gzip sitting on the
+    // very server whose credentials it would carry.
+    await clearTables(backupDatabase, ['backend_header', 'backend_assignment', 'backend']);
     if (!includeFeed) {
-      await backupDatabase.execAsync(`
-          DELETE FROM feed_items;
-          DELETE FROM feed_identity;
-          DELETE FROM feed_followed_user;
-          DELETE FROM feed_follower_user;
-          DELETE FROM feed_follow_request;
-          DELETE FROM feed_revoked_follow_secrets;
-          DELETE FROM feed_unpublished_sessions;
-          `);
+      await clearTables(backupDatabase, [
+        'feed_items',
+        'feed_identity',
+        'feed_followed_user',
+        'feed_follower_user',
+        'feed_follow_request',
+        'feed_revoked_follow_secrets',
+        'feed_unpublished_sessions',
+      ]);
     }
     const bytes = await backupDatabase.serializeAsync();
     const stream = new CompressionStream('gzip');

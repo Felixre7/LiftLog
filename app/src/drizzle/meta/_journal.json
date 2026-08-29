@@ -57,6 +57,13 @@
       "when": 1786757731046,
       "tag": "0007_brown_quicksilver",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1787871156116,
+      "tag": "0008_far_catseye",
+      "breakpoints": true
     }
   ]
 }

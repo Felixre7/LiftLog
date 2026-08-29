@@ -69,6 +69,22 @@ describe("backup handler", () => {
     assert.equal(uploads, 0);
   });
 
+  it("answers a probe without uploading", async () => {
+    let uploads = 0;
+    const handler = createHandler(
+      { send: async () => uploads++ },
+      () => new Date(),
+      { BUCKET_NAME: "backup-bucket" },
+    );
+
+    const result = await handler(
+      event({ body: null, headers: { "x-liftlog-probe": "true" } }),
+    );
+
+    assert.equal(result.statusCode, 200);
+    assert.equal(uploads, 0);
+  });
+
   it("preserves bytes from legacy non-base64 binary requests", async () => {
     const uploads: unknown[] = [];
     const handler = createHandler(

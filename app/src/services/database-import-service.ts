@@ -19,6 +19,10 @@ import {
   dedupeBuiltInExercises,
   dedupeBuiltInExercisesDataMigration,
 } from '@/services/data-migrations/dedupe-builtin-exercises';
+import {
+  seedBackendAssignments,
+  seedBackendAssignmentsDataMigration,
+} from '@/services/data-migrations/seed-backend-assignments';
 
 export interface DatabaseImporter {
   importOldData(): Promise<void>;
@@ -56,6 +60,9 @@ export class DatabaseImportService implements DatabaseImporter {
     }
     if (!dataMigrationsRun.includes(dedupeBuiltInExercisesDataMigration)) {
       await dedupeBuiltInExercises(this.db, this.keyValueStore);
+    }
+    if (!dataMigrationsRun.includes(seedBackendAssignmentsDataMigration)) {
+      await seedBackendAssignments(this.db);
     }
 
     console.info('Imported old data to DB in ' + (performance.now() - now) + 'ms');

@@ -11,8 +11,9 @@ import {
   AnyVersionSessionJSON,
   AnyVersionSessionUserEventJSON,
 } from '@/models/storage/versions/any';
+import { BackendFeature, BackendKind } from '@/models/backend';
 import { sql } from 'drizzle-orm';
-import { check, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { check, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const sessionsSchema = sqliteTable(
   'session',
@@ -101,4 +102,29 @@ export const feedUnpublishedSessionsSchema = sqliteTable('feed_unpublished_sessi
 // Just a table we can use to keep track of which data migrations have been run
 export const dataMigrationsSchema = sqliteTable('data_migration', {
   id: text().primaryKey(),
+});
+
+export const backendsSchema = sqliteTable('backend', {
+  id: text().primaryKey(),
+  name: text().notNull(),
+  url: text().notNull(),
+  kind: text().$type<BackendKind>().notNull(),
+});
+
+export const backendHeadersSchema = sqliteTable(
+  'backend_header',
+  {
+    backendId: text()
+      .notNull()
+      .references(() => backendsSchema.id, { onDelete: 'cascade' }),
+    name: text().notNull(),
+    value: text().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.backendId, table.name] })],
+);
+
+// A missing row means the feature has no backend and does not run.
+export const backendAssignmentsSchema = sqliteTable('backend_assignment', {
+  feature: text().$type<BackendFeature>().primaryKey(),
+  backendId: text().notNull(),
 });

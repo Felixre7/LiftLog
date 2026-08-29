@@ -12,6 +12,12 @@ namespace LiftLog.Api.Controllers;
 [FeatureCheck(Feature.Backup)]
 public class BackupController(IBackupSink? backupSink = null) : ControllerBase
 {
+    /// <summary>
+    /// The app checks a backup target by posting an empty body with this header. Answer it, but do
+    /// not store it - see docs/RemoteBackup.md.
+    /// </summary>
+    private const string ProbeHeaderName = "X-LiftLog-Probe";
+
     [Authorize(AuthenticationSchemes = AuthSchemes.Backup)]
     [HttpPost]
     public async Task<IResult> Post()
@@ -24,6 +30,11 @@ public class BackupController(IBackupSink? backupSink = null) : ControllerBase
         if (string.IsNullOrWhiteSpace(user))
         {
             return Results.Unauthorized();
+        }
+
+        if (Request.Headers.ContainsKey(ProbeHeaderName))
+        {
+            return Results.Ok();
         }
 
         await backupSink.UploadBackupAsync(user, Request.Body);

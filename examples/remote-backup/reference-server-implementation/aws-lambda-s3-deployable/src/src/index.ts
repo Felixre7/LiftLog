@@ -44,6 +44,12 @@ export function createHandler(
       return getReturnResult(400, "Invalid request. Must POST to /backup.");
     }
 
+    // The app checks its backup target by posting an empty body with this header. Answer it, but do
+    // not store it - see docs/RemoteBackup.md.
+    if (event.headers["X-LiftLog-Probe"] || event.headers["x-liftlog-probe"]) {
+      return getReturnResult(200, "Probe acknowledged. Nothing was stored.");
+    }
+
     if (!event.body) {
       return getReturnResult(400, "No file uploaded or body is empty.");
     }
