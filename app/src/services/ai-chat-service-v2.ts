@@ -5,15 +5,21 @@ import { AsyncIterableSubject } from 'data-async-iterators';
 import { match, P } from 'ts-pattern';
 import { HubConnectionFactory } from '@/services/hub-connection-factory';
 import { selectBackendForFeature } from '@/store/backends';
+import { ResolvedBackendForFeature } from '@/models/backend';
 import { RootState } from '@/store';
 import Purchases from 'react-native-purchases';
 import { selectPreferredWeightUnit } from '@/store/settings';
+
+/** A connection belongs to the address and headers it was opened with; either changing needs a new one. */
+const connectionKeyFor = (backend: ResolvedBackendForFeature) => JSON.stringify([backend.url, backend.headers]);
 
 /**
  * AI chat service connecting to the `/ai-chat-v2` hub.
  */
 export class AiChatServiceV2 {
   private connection: HubConnection | undefined;
+  /** Which backend the live connection was opened against. A chat lives on the server holding it. */
+  private connectedTo: string | undefined;
   constructor(
     private hubConnectionFactory: HubConnectionFactory,
     private getState: () => RootState,
@@ -58,13 +64,22 @@ export class AiChatServiceV2 {
   }
 
   async restartChat() {
-    if (this.connection && this.connection.state !== HubConnectionState.Connected) {
-      await this.connection.stop().catch(console.error);
-      this.connection = undefined;
+    const backend = selectBackendForFeature(this.getState(), 'aiPlanner');
+    const isStale = !backend || this.connectedTo !== connectionKeyFor(backend);
+    if (this.connection && (isStale || this.connection.state !== HubConnectionState.Connected)) {
+      await this.dropConnection();
     }
+    // A restart on the server we are already on keeps the connection; a new server gets a new one.
     if (this.connection?.state === HubConnectionState.Connected) {
       await this.connection.send('RestartChat');
     }
+  }
+
+  private async dropConnection() {
+    const connection = this.connection;
+    this.connection = undefined;
+    this.connectedTo = undefined;
+    await connection?.stop().catch(console.error);
   }
 
   private requiresPro(): boolean {
@@ -82,18 +97,29 @@ export class AiChatServiceV2 {
       subject.end();
       return subject;
     }
+    const connectionKey = connectionKeyFor(backend);
+    if (this.connection && this.connectedTo !== connectionKey) {
+      await this.dropConnection();
+    }
     if (!this.connection) {
-      this.connection = this.hubConnectionFactory.create(backend, '/ai-chat-v2');
+      const connection = this.hubConnectionFactory.create(backend, '/ai-chat-v2');
+      this.connection = connection;
+      this.connectedTo = connectionKey;
 
-      this.connection.onclose((e) => {
-        this.connection = undefined;
+      connection.onclose((e) => {
+        // A connection we already replaced closing must not take the new one down with it.
+        if (this.connection === connection) {
+          this.connection = undefined;
+          this.connectedTo = undefined;
+        }
         if (e) {
           console.error(e);
         }
       });
 
-      await this.connection.start().catch(async (e) => {
+      await connection.start().catch(async (e) => {
         this.connection = undefined;
+        this.connectedTo = undefined;
         if (e) {
           console.error(e);
           await Purchases.syncPurchases().catch(console.error);

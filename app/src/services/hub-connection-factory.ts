@@ -4,7 +4,6 @@ import { HubConnectionBuilder } from '@microsoft/signalr';
 export class HubConnectionFactory {
   create(backend: ResolvedBackendForFeature, path: string) {
     const builder = new HubConnectionBuilder();
-    console.log(backend);
     return builder.withUrl(`${backend.url}${path}`, { headers: backend.headers }).build();
   }
 }
