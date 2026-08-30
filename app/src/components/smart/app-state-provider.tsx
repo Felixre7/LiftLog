@@ -6,7 +6,8 @@ import { copyLogs } from '@/store/app';
 import { T } from '@tolgee/react';
 import * as Application from 'expo-application';
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { Animated, Linking, Platform, Text, View } from 'react-native';
+import { Animated, Platform, Text, View } from 'react-native';
+import { openUrl } from '@/utils/open-url';
 import { useDispatch } from 'react-redux';
 
 // How long to wait before assuming startup has stalled and offering an escape hatch.
@@ -66,7 +67,7 @@ function StuckHelp() {
   const bugReportUrl = `https://github.com/LiamMorrow/LiftLog/issues/new?assignees=&labels=bug&projects=&template=bug_report.yaml&app-version=${encodeURIComponent(appVersion)}&platform=${Platform.OS}&os-version=${Platform.Version}`;
 
   const openBugReport = () => {
-    void Linking.canOpenURL(bugReportUrl).then(() => Linking.openURL(bugReportUrl));
+    openUrl(bugReportUrl);
   };
   const doCopyLogs = () => {
     dispatch(copyLogs());

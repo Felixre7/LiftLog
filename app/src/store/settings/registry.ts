@@ -9,6 +9,8 @@ import {
   ColorSchemeSeed,
   dayOfWeekCodec,
   intCodec,
+  PlansSortOrder,
+  plansSortOrderCodec,
   stringCodec,
   ThemeMode,
   themeModeCodec,
@@ -57,7 +59,6 @@ const pref = <T>(descriptor: PrefDescriptor<T>): PrefDescriptor<T> => descriptor
 export const preferenceRegistry = {
   useImperialUnits: pref({ default: false, codec: boolCodec }),
   showBodyweight: pref({ default: true, codec: boolCodec }),
-  showTips: pref({ default: true, codec: boolCodec }),
   showFeed: pref({ default: true, codec: boolCodec }),
   restNotifications: pref({ default: true, codec: boolCodec }),
   restTimersEnabled: pref({ default: true, codec: boolCodec }),
@@ -67,11 +68,11 @@ export const preferenceRegistry = {
   keepScreenAwakeDuringWorkout: pref({ default: true, codec: boolCodec }),
   showPostWorkoutSummary: pref({ default: false, codec: boolCodec }),
   trueBlackDarkTheme: pref({ default: false, codec: boolCodec }),
-  backupReminder: pref({ default: true, codec: boolCodec }),
   tipToShow: pref({ default: 1, codec: intCodec }),
   lastSeenWhatsNewId: pref({ default: 0, codec: intCodec }),
   colorSchemeSeed: pref<ColorSchemeSeed>({ default: 'default', codec: colorSchemeSeedCodec }),
   themeMode: pref<ThemeMode>({ default: 'system', codec: themeModeCodec }),
+  plansSortOrder: pref<PlansSortOrder>({ default: 'name', codec: plansSortOrderCodec }),
   firstDayOfWeek: pref<DayOfWeek>({ default: DayOfWeek.SUNDAY, codec: dayOfWeekCodec }),
 
   // Generic read, but bespoke write-back (permission gate + revert).

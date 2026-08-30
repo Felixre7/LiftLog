@@ -1,31 +1,34 @@
-import { Switch } from '@/components/presentation/foundation/switch';
 import { AppIconSource } from '@/components/presentation/foundation/ms-icon-source';
 import { SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
+import SelectPicker from '@/components/presentation/foundation/select-picker';
+import {
+  SelectPickerOption,
+  SelectPickerValue,
+} from '@/components/presentation/foundation/select-picker/select-picker-props';
 import { ReactNode } from 'react';
 
-interface ListSwitchProps {
+export function SegmentedListSelect<T extends SelectPickerValue>(props: {
   label: ReactNode;
   supportingText?: ReactNode;
   icon?: AppIconSource;
-  value: boolean;
-  onValueChange: (value: boolean) => void;
+  value: T;
+  options: SelectPickerOption<T>[];
+  onChange: (value: T) => void;
+  enabled?: boolean;
   testID?: string;
-  disabled?: boolean;
-}
-
-export function SegmentedListSwitch(props: ListSwitchProps) {
+}) {
   return (
     <SegmentListFormElement
       label={props.label}
       supportingText={props.supportingText}
       icon={props.icon}
-      onPress={() => props.onValueChange(!props.value)}
       right={
-        <Switch
+        <SelectPicker
           value={props.value}
-          disabled={props.disabled}
+          options={props.options}
+          onChange={props.onChange}
+          enabled={props.enabled}
           testID={props.testID}
-          onValueChange={props.onValueChange}
         />
       }
     />

@@ -21,8 +21,6 @@
   "backup.plaintext_export.subtitle": "Verilerinizi diğer uygulamalarda kullanılmak üzere CSV gibi düz metin formatında dışa aktarın",
   "backup.plaintext_export.title": "düz metin olarak çıkar",
   "backup.reminder.body": "Son yedeklemeniz üzerinden çok zaman geçti. Veri kaybını önlemek için verilerinizi düzenli olarak yedeklemeniz önerilir. Verilerinizi şimdi yedeklemek ister misiniz?",
-  "backup.reminders.subtitle": "Düzenli olarak yedekleme yapmanız tavsiye edilir",
-  "backup.reminders.title": "Yedekleme hatırlatıcıları",
   "backup.remote.explanation": "Bu gelişmiş özellik Liftlog'un yedekleri uzak sunucuda saklamasını sağlar.",
   "backup.restore_data.subtitle": "Geri yüklemek için dosyayı içe aktar",
   "backup.restore_data.title": "Veriyi geri yükle",

@@ -1,6 +1,3 @@
-import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
-import Button from '@/components/presentation/foundation/button';
-import ListSwitch from '@/components/presentation/foundation/list-switch';
 import ThemeChooser from '@/components/presentation/foundation/editors/theme-chooser';
 import { RootState, useAppSelector } from '@/store';
 import {
@@ -10,81 +7,79 @@ import {
   setShowBodyweight,
   setShowFeed,
   setShowPostWorkoutSummary,
-  setShowTips,
   setThemeMode,
   setTrueBlackDarkTheme,
   setWelcomeWizardCompleted,
 } from '@/store/settings';
-import { T, useTranslate } from '@tolgee/react';
-import { Stack } from 'expo-router';
-import { List } from 'react-native-paper';
+import { useTranslate } from '@tolgee/react';
 import { useDispatch } from 'react-redux';
-import { spacing } from '@/hooks/useAppTheme';
+import { SettingsPage } from '@/components/layout/settings-page';
+import { SegmentedGroup } from '@/components/presentation/foundation/segmented-list';
+import { SegmentedListSwitch } from '@/components/presentation/foundation/segmented-list-switch';
+import { SegmentedListLink } from '@/components/presentation/foundation/segmented-list-link';
 
-export default function AppConfiguration() {
+export default function AppConfigurationPage() {
   const { t } = useTranslate();
   const settings = useAppSelector((state: RootState) => state.settings);
   const dispatch = useDispatch();
 
   return (
-    <FullHeightScrollView>
-      <Stack.Screen options={{ title: t('settings.app_configuration.title') }} />
-      <List.Section>
-        <ListSwitch
+    <SettingsPage title={t('settings.app_configuration.title')} caption={t('settings.app_configuration.subtitle')}>
+      <SegmentedGroup>
+        <SegmentedListSwitch
           testID="setShowBodyweight"
-          headline={<T keyName="settings.show_bodyweight.label" />}
-          supportingText={<T keyName="settings.show_bodyweight.subtitle" />}
+          label={t('settings.show_bodyweight.label')}
+          icon={'monitorWeightFill'}
+          supportingText={t('settings.show_bodyweight.subtitle')}
           value={settings.showBodyweight}
           onValueChange={(value) => dispatch(setShowBodyweight(value))}
         />
-        <ListSwitch
-          headline={<T keyName="feed.show_feed.label" />}
-          supportingText={<T keyName="feed.show_feed.subtitle" />}
+        <SegmentedListSwitch
+          label={t('feed.show_feed.label')}
+          icon={'forum'}
+          supportingText={t('feed.show_feed.subtitle')}
           value={settings.showFeed}
           onValueChange={(value) => dispatch(setShowFeed(value))}
         />
-        <ListSwitch
-          headline={<T keyName="workout.show_post_workout_summary.label" />}
-          supportingText={<T keyName="workout.show_post_workout_summary.subtitle" />}
+        <SegmentedListSwitch
+          label={t('workout.show_post_workout_summary.label')}
+          icon={'assignmentTurnedIn'}
+          supportingText={t('workout.show_post_workout_summary.subtitle')}
           value={settings.showPostWorkoutSummary}
           onValueChange={(value) => dispatch(setShowPostWorkoutSummary(value))}
         />
-
-        <ListSwitch
-          headline={<T keyName="workout.notes_expanded_by_default.label" />}
-          supportingText={<T keyName="workout.notes_expanded_by_default.subtitle" />}
+        <SegmentedListSwitch
+          label={t('workout.notes_expanded_by_default.label')}
+          icon={'notes'}
+          supportingText={t('workout.notes_expanded_by_default.subtitle')}
           value={settings.notesExpandedByDefault}
           onValueChange={(value) => dispatch(setNotesExpandedByDefault(value))}
         />
-        <ListSwitch
-          headline={<T keyName="workout.keep_screen_awake.label" />}
-          supportingText={<T keyName="workout.keep_screen_awake.subtitle" />}
+        <SegmentedListSwitch
+          label={t('workout.keep_screen_awake.label')}
+          icon={'visibility'}
+          supportingText={t('workout.keep_screen_awake.subtitle')}
           value={settings.keepScreenAwakeDuringWorkout}
           onValueChange={(value) => dispatch(setKeepScreenAwakeDuringWorkout(value))}
         />
-        <ListSwitch
-          headline={<T keyName="settings.show_tips.label" />}
-          supportingText={<T keyName="settings.show_tips.subtitle" />}
-          value={settings.showTips}
-          onValueChange={(value) => dispatch(setShowTips(value))}
-        />
+      </SegmentedGroup>
 
-        <ThemeChooser
-          seed={settings.colorSchemeSeed}
-          onUpdateTheme={(x) => dispatch(setColorSchemeSeed(x))}
-          trueBlack={settings.trueBlackDarkTheme}
-          setTrueBlack={(b) => dispatch(setTrueBlackDarkTheme(b))}
-          themeMode={settings.themeMode}
-          setThemeMode={(m) => dispatch(setThemeMode(m))}
-        />
-        <Button
+      <ThemeChooser
+        seed={settings.colorSchemeSeed}
+        onUpdateTheme={(x) => dispatch(setColorSchemeSeed(x))}
+        trueBlack={settings.trueBlackDarkTheme}
+        setTrueBlack={(b) => dispatch(setTrueBlackDarkTheme(b))}
+        themeMode={settings.themeMode}
+        setThemeMode={(m) => dispatch(setThemeMode(m))}
+      />
+
+      <SegmentedGroup>
+        <SegmentedListLink
+          label={t('onboarding.start_setup_wizard.button')}
+          icon={'replay'}
           onPress={() => dispatch(setWelcomeWizardCompleted(false))}
-          mode="outlined"
-          style={{ marginHorizontal: spacing.pageHorizontalMargin }}
-        >
-          {t('onboarding.start_setup_wizard.button')}
-        </Button>
-      </List.Section>
-    </FullHeightScrollView>
+        />
+      </SegmentedGroup>
+    </SettingsPage>
   );
 }

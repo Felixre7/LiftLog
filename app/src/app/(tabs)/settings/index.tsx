@@ -1,18 +1,22 @@
-import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
-import { useAppTheme } from '@/hooks/useAppTheme';
+import { SettingsPage } from '@/components/layout/settings-page';
+import { SegmentedGroup, SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
+import { SegmentedListLink } from '@/components/presentation/foundation/segmented-list-link';
+import AppIcon from '@/components/presentation/foundation/icon';
+import { spacing, useAppTheme } from '@/hooks/useAppTheme';
 import { T, useTranslate } from '@tolgee/react';
-import { Link, Stack, useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Platform } from 'react-native';
-import { Text, Badge, Dialog, Icon, List, Portal } from 'react-native-paper';
+import { Platform, View } from 'react-native';
+import { Text, Badge, Dialog, Icon, Portal } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
 import * as Application from 'expo-application';
 import { useDispatch } from 'react-redux';
+import { openUrl } from '@/utils/open-url';
 import { copyLogs } from '@/store/app';
 import { useAppSelector } from '@/store';
 import { selectHasUnseenWhatsNew } from '@/store/settings';
 
-export default function Settings() {
+export default function SettingsPageIndex() {
   const { t } = useTranslate();
   const { colors } = useAppTheme();
   const { push } = useRouter();
@@ -20,9 +24,6 @@ export default function Settings() {
   const dispatch = useDispatch();
   const hasUnseenWhatsNew = useAppSelector(selectHasUnseenWhatsNew);
 
-  const openUrl = (url: string) => {
-    void Linking.canOpenURL(url).then(() => Linking.openURL(url));
-  };
   const doCopyLogs = () => {
     dispatch(copyLogs());
   };
@@ -31,110 +32,93 @@ export default function Settings() {
 
   const bugReportUrl = `https://github.com/LiamMorrow/LiftLog/issues/new?assignees=&labels=bug&projects=&template=bug_report.yaml&app-version=${encodeURIComponent(appVersion)}&platform=${Platform.OS}&os-version=${Platform.Version}`;
 
+  const externalLink = <AppIcon source="openInBrowser" size={20} />;
+
   return (
-    <FullHeightScrollView>
-      <Stack.Screen options={{ title: t('settings.settings.title') }} />
-      <List.Section title={t('settings.configuration.title')}>
-        <List.Item
+    <SettingsPage title={t('settings.settings.title')}>
+      <SegmentedGroup>
+        <SegmentedListLink
+          label={t('plan.manage.title')}
+          icon={'assignment'}
           onPress={() => push('/settings/program-list')}
-          title={t('plan.manage.title')}
-          description={t('plan.manage.subtitle')}
-          left={(props) => <List.Icon icon={'assignment'} {...props} />}
-        ></List.Item>
-        <List.Item
+        />
+        <SegmentedListLink
+          label={t('exercise.manage.button')}
+          icon={'directionsRun'}
           onPress={() => push('/settings/manage-exercises')}
-          title={t('exercise.manage.button')}
-          description={t('exercise.manage.subtitle')}
-          left={(props) => <List.Icon icon={'directionsRun'} {...props} />}
-        ></List.Item>
-        <List.Item
+        />
+        <SegmentedListLink label={t('ai.planner.title')} icon={'bolt'} onPress={() => push('/settings/ai/planner')} />
+      </SegmentedGroup>
+
+      <SegmentedGroup>
+        <SegmentedListLink
           testID="appConfiguration"
+          label={t('settings.app_configuration.title')}
+          icon={'settings'}
           onPress={() => push('/settings/app-configuration')}
-          title={t('settings.app_configuration.title')}
-          description={t('settings.app_configuration.subtitle')}
-          left={(props) => <List.Icon icon={'settings'} {...props} />}
-        ></List.Item>
-        <List.Item
+        />
+        <SegmentedListLink
           testID="localization"
+          label={t('settings.localisation.title')}
+          icon={'language'}
           onPress={() => push('/settings/localization')}
-          title={t('settings.localisation.title')}
-          description={t('settings.localisation.subtitle')}
-          left={(props) => <List.Icon icon={'language'} {...props} />}
-        ></List.Item>
-
-        <List.Item
+        />
+        <SegmentedListLink
+          label={t('settings.notifications.title')}
+          icon={'notifications'}
           onPress={() => push('/settings/notifications')}
-          title={t('settings.notifications.title')}
-          description={t('settings.notifications.subtitle')}
-          left={(props) => <List.Icon icon={'notifications'} {...props} />}
-        ></List.Item>
+        />
+      </SegmentedGroup>
 
-        <List.Item
-          onPress={() => push('/settings/backends')}
-          title={t('backends.title')}
-          description={t('backends.subtitle')}
-          left={(props) => <List.Icon icon={'dns'} {...props} />}
-        ></List.Item>
-
-        <List.Item
+      <SegmentedGroup>
+        <SegmentedListLink label={t('backends.title')} icon={'dns'} onPress={() => push('/settings/backends')} />
+        <SegmentedListLink
+          label={t('backup.export_backup_restore.title')}
+          icon={'settingsBackupRestore'}
           onPress={() => push('/settings/backup-and-restore')}
-          title={t('backup.export_backup_restore.title')}
-          description={t('backup.export_backup_restore.subtitle')}
-          left={(props) => <List.Icon icon={'settingsBackupRestore'} {...props} />}
-        ></List.Item>
-      </List.Section>
+        />
+      </SegmentedGroup>
 
-      <List.Section title={t('settings.pro_features.title')}>
-        <List.Item
-          onPress={() => push('/settings/ai/planner')}
-          title={t('ai.planner.title')}
-          description={t('ai.planner.subtitle')}
-          left={(props) => <List.Icon icon={'bolt'} {...props} />}
-        ></List.Item>
-      </List.Section>
-
-      <List.Section title={t('settings.support.title')}>
-        <List.Item
+      <SegmentedGroup>
+        <SegmentListFormElement
+          label={t('settings.feature_request.title')}
+          icon={'star'}
           onPress={() => openUrl('https://github.com/LiamMorrow/LiftLog/discussions')}
-          title={t('settings.feature_request.title')}
-          description={t('settings.feature_request.subtitle')}
-          left={(props) => <List.Icon icon={'star'} {...props} />}
-        ></List.Item>
-
-        <List.Item
+          right={externalLink}
+        />
+        <SegmentListFormElement
+          label={t('settings.bug_report.title')}
+          icon={'bugReport'}
           onPress={() => openUrl(bugReportUrl)}
-          title={t('settings.bug_report.title')}
-          description={t('settings.bug_report.subtitle')}
-          left={(props) => <List.Icon icon={'bugReport'} {...props} />}
-        ></List.Item>
-
-        <List.Item
-          onPress={doCopyLogs}
-          title={t('settings.copy_logs.title')}
-          description={t('settings.copy_logs.subtitle')}
-          left={(props) => <List.Icon icon={'terminal'} {...props} />}
-        ></List.Item>
-
-        <List.Item
+          right={externalLink}
+        />
+        <SegmentListFormElement label={t('settings.copy_logs.title')} icon={'terminal'} onPress={doCopyLogs} />
+        <SegmentListFormElement
+          label={t('settings.translation.title')}
+          icon={'translate'}
           onPress={() => openUrl('https://translate.liftlog.online')}
-          title={t('settings.translation.title')}
-          description={t('settings.translation.subtitle')}
-          left={(props) => <List.Icon icon={'translate'} {...props} />}
-        ></List.Item>
-        <List.Item
+          right={externalLink}
+        />
+      </SegmentedGroup>
+
+      <SegmentedGroup>
+        <SegmentListFormElement
+          label={t('whats_new.title')}
+          icon={'campaign'}
           onPress={() => push('/settings/whats-new')}
-          title={t('whats_new.title')}
-          description={t('whats_new.subtitle')}
-          left={(props) => <List.Icon icon={'campaign'} {...props} />}
-          right={(props) => (hasUnseenWhatsNew ? <Badge {...props} size={10} style={{ alignSelf: 'center' }} /> : null)}
-        ></List.Item>
-        <List.Item
+          right={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+              {hasUnseenWhatsNew ? <Badge size={10} /> : undefined}
+              <AppIcon source="chevronRight" size={20} color={colors.onSurfaceVariant} />
+            </View>
+          }
+        />
+        <SegmentListFormElement
+          label={t('settings.app_info.title')}
+          icon={'info'}
           onPress={() => setAppInfoOpen(true)}
-          title={t('settings.app_info.title')}
-          description={t('settings.app_info.subtitle')}
-          left={(props) => <List.Icon icon={'info'} {...props} />}
-        ></List.Item>
-      </List.Section>
+        />
+      </SegmentedGroup>
 
       <Portal>
         <Dialog visible={appInfoOpen} onDismiss={() => setAppInfoOpen(false)}>
@@ -160,6 +144,6 @@ export default function Settings() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
-    </FullHeightScrollView>
+    </SettingsPage>
   );
 }

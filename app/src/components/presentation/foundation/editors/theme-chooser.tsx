@@ -10,11 +10,12 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { FlatList } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
-import { List } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
-import ListSwitch from '@/components/presentation/foundation/list-switch';
 import ColorPickerDialog from '@/components/presentation/foundation/editors/color-picker-dialog';
-import SelectPicker, { SelectPickerOption } from '@/components/presentation/foundation/select-picker';
+import { SelectPickerOption } from '@/components/presentation/foundation/select-picker';
+import { SegmentedGroup, SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
+import { SegmentedListSelect } from '@/components/presentation/foundation/segmented-list-select';
+import { SegmentedListSwitch } from '@/components/presentation/foundation/segmented-list-switch';
 
 interface ThemeChooserProps {
   seed: ColorSchemeSeed;
@@ -137,55 +138,54 @@ export default function ThemeChooser(props: ThemeChooserProps) {
 
   return (
     <>
-      <List.Item title={t('settings.theme.title')} />
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spacing[4],
-          width: '100%',
-          overflow: 'scroll',
-          paddingHorizontal: spacing.pageHorizontalMargin,
-          paddingVertical: spacing[2],
-        }}
-      >
-        <FocusRing isSelected={selectedSeed === 'default'}>
-          <Button style={{ position: 'relative' }} onPress={() => void updateSeed('default')}>
-            <T keyName="generic.default.label" />
-          </Button>
-        </FocusRing>
-        <FlatList
-          horizontal
-          data={colorSeeds}
-          renderItem={renderColorBall}
-          keyExtractor={(item) => item}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: spacing[2], padding: spacing[2], alignItems: 'center' }}
-          ListFooterComponent={
-            <CustomBall
-              active={isCustom}
-              color={isCustom ? selectedSeed : undefined}
-              onPress={() => setPickerOpen(true)}
-            />
+      <SegmentedGroup>
+        <SegmentListFormElement
+          label={t('settings.theme.title')}
+          line2={
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing[4],
+                marginBlockStart: spacing[2],
+              }}
+            >
+              <FocusRing isSelected={selectedSeed === 'default'}>
+                <Button style={{ position: 'relative' }} onPress={() => void updateSeed('default')}>
+                  <T keyName="generic.default.label" />
+                </Button>
+              </FocusRing>
+              <FlatList
+                horizontal
+                data={colorSeeds}
+                renderItem={renderColorBall}
+                keyExtractor={(item) => item}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: spacing[2], padding: spacing[2], alignItems: 'center' }}
+                ListFooterComponent={
+                  <CustomBall
+                    active={isCustom}
+                    color={isCustom ? selectedSeed : undefined}
+                    onPress={() => setPickerOpen(true)}
+                  />
+                }
+              />
+            </View>
           }
         />
-      </View>
-      <List.Item
-        title={t('settings.theme.mode.label')}
-        right={() => (
-          <SelectPicker
-            testID="setThemeMode"
-            value={props.themeMode}
-            options={themeModeOptions}
-            onChange={props.setThemeMode}
-          />
-        )}
-      />
-      <ListSwitch
-        headline={t('settings.app_configuration.true_black_dark_theme.title')}
-        value={props.trueBlack}
-        onValueChange={props.setTrueBlack}
-      />
+        <SegmentedListSelect
+          label={t('settings.theme.mode.label')}
+          testID="setThemeMode"
+          value={props.themeMode}
+          options={themeModeOptions}
+          onChange={props.setThemeMode}
+        />
+        <SegmentedListSwitch
+          label={t('settings.app_configuration.true_black_dark_theme.title')}
+          value={props.trueBlack}
+          onValueChange={props.setTrueBlack}
+        />
+      </SegmentedGroup>
       <ColorPickerDialog
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}

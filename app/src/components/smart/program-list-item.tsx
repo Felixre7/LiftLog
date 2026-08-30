@@ -3,28 +3,28 @@ import { SharedProgramBlueprint } from '@/models/feed-models';
 import { useAppSelector, useAppSelectorWithArg } from '@/store';
 import { showSnackbar } from '@/store/app';
 import { encryptAndShare } from '@/store/feed';
-import { deleteSavedPlan, exportPlan, savePlan, selectProgram, setActivePlan } from '@/store/program';
+import { deleteSavedPlan, exportPlan, savePlan, selectProgram } from '@/store/program';
 import { uuid } from '@/utils/uuid';
-import { DateTimeFormatter } from '@js-joda/core';
 import { useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
 import IconButton from '@/components/presentation/foundation/icon-button';
-import { List, RadioButton } from 'react-native-paper';
+import { SegmentedListRowAction, SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
 import Menu from '@/components/presentation/foundation/menu';
 import { useDispatch } from 'react-redux';
 
 interface ProgramListItemProps {
   id: string;
   isFocused: boolean;
+  onSelect: () => void;
 }
 
 interface ItemProps {
   id: string;
+  mode?: 'contained' | 'contained-tonal' | 'outlined';
 }
 
-function ItemMenu({ id }: ItemProps) {
+export function ItemMenu({ id, mode }: ItemProps) {
   const thisProgram = useAppSelectorWithArg(selectProgram, id);
   const isActive = useAppSelector((x) => x.program.activePlanId) === id;
   const dispatch = useDispatch();
@@ -32,7 +32,7 @@ function ItemMenu({ id }: ItemProps) {
   const { t } = useTranslate();
   return (
     <Menu
-      trigger={(open) => <IconButton testID="more-program-btn" onPress={open} icon={'moreHoriz'} />}
+      trigger={(open) => <IconButton testID="more-program-btn" mode={mode} onPress={open} icon={'moreHoriz'} />}
       items={[
         {
           label: t('generic.edit.button'),
@@ -88,11 +88,8 @@ function ItemMenu({ id }: ItemProps) {
   );
 }
 
-export default function ProgramListItem({ id, isFocused }: ProgramListItemProps) {
+export default function ProgramListItem({ id, isFocused, onSelect }: ProgramListItemProps) {
   const program = useAppSelectorWithArg(selectProgram, id);
-  const activeProgramId = useAppSelector((state) => state.program.activePlanId);
-  const dispatch = useDispatch();
-  const { t } = useTranslate();
   const { push } = useRouter();
   const { colors } = useAppTheme();
   const [focusStyle, setFocusStyle] = useState({});
@@ -101,14 +98,7 @@ export default function ProgramListItem({ id, isFocused }: ProgramListItemProps)
     let timeout: NodeJS.Timeout;
     const handleTimes = () => {
       times++;
-      setFocusStyle(
-        times % 2 === 0
-          ? {
-              backgroundColor: colors.secondaryContainer,
-              color: colors.onSecondaryContainer,
-            }
-          : {},
-      );
+      setFocusStyle(times % 2 === 0 ? { backgroundColor: colors.secondaryContainer } : {});
       if (times < 10) {
         timeout = setTimeout(handleTimes, 150);
       }
@@ -119,34 +109,18 @@ export default function ProgramListItem({ id, isFocused }: ProgramListItemProps)
         clearTimeout(timeout);
       };
     }
-  }, [isFocused, colors.onSecondaryContainer, colors.secondaryContainer]);
+  }, [isFocused, colors.secondaryContainer]);
   return (
-    <List.Item
-      title={program.name}
-      description={t('date.edited_on.label', {
-        date: program.lastEdited.format(DateTimeFormatter.ISO_DATE),
-      })}
+    <SegmentListFormElement
+      label={program.name}
+      style={focusStyle}
       onLongPress={() => push(`/settings/manage-workouts/${id}`)}
-      titleStyle={focusStyle}
-      descriptionStyle={focusStyle}
-      contentStyle={focusStyle}
-      right={() => (
-        <View style={{ flexDirection: 'row', alignItems: 'center', ...focusStyle }}>
-          <RadioButton
-            value={id}
-            status={activeProgramId === id ? 'checked' : 'unchecked'}
-            onPress={() => dispatch(setActivePlan({ activePlanId: id }))}
-          />
+      right={
+        <SegmentedListRowAction>
           <ItemMenu id={id} />
-        </View>
-      )}
-      onPress={() => {
-        if (activeProgramId === id) {
-          push(`/settings/manage-workouts/${id}`);
-        }
-        dispatch(setActivePlan({ activePlanId: id }));
-      }}
-      style={{}}
-    ></List.Item>
+        </SegmentedListRowAction>
+      }
+      onPress={onSelect}
+    />
   );
 }

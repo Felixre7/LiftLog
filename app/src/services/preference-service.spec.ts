@@ -49,7 +49,6 @@ interface BoolPref {
 const booleanPrefs: BoolPref[] = [
   { key: 'useImperialUnits', default: false },
   { key: 'showBodyweight', default: true },
-  { key: 'showTips', default: true },
   { key: 'showFeed', default: true },
   { key: 'restNotifications', default: true },
   { key: 'restTimersEnabled', default: true },
@@ -60,7 +59,6 @@ const booleanPrefs: BoolPref[] = [
   { key: 'exportToHealthAggregator', default: false },
   { key: 'showPostWorkoutSummary', default: false },
   { key: 'trueBlackDarkTheme', default: false },
-  { key: 'backupReminder', default: true },
 ];
 
 describe('PreferenceService - boolean preferences', () => {

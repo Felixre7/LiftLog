@@ -9,6 +9,7 @@ import { Edges, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-c
 export default function FullHeightScrollView({
   children,
   floatingChildren,
+  scrollRef,
   scrollStyle,
   avoidKeyboard,
   contentContainerStyle,
@@ -16,6 +17,7 @@ export default function FullHeightScrollView({
 }: {
   children: React.ReactNode;
   floatingChildren?: React.ReactNode;
+  scrollRef?: React.Ref<ScrollView>;
   avoidKeyboard?: boolean;
   scrollStyle?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
@@ -38,7 +40,12 @@ export default function FullHeightScrollView({
       ]}
     >
       {!avoidKeyboard ? (
-        <ScrollView onScroll={handleScroll} style={[scrollStyle]} contentContainerStyle={[contentContainerStyle]}>
+        <ScrollView
+          ref={scrollRef}
+          onScroll={handleScroll}
+          style={[scrollStyle]}
+          contentContainerStyle={[contentContainerStyle]}
+        >
           {children}
           <View style={{ height: bottomInsetHeight }} />
         </ScrollView>
@@ -46,6 +53,7 @@ export default function FullHeightScrollView({
         <KeyboardAwareScrollView
           // @ts-expect-error -- Scrollview keeps flitting between compat and not
           ScrollViewComponent={ScrollView}
+          ref={scrollRef as never}
           onScroll={handleScroll}
           style={[scrollStyle]}
           contentContainerStyle={[contentContainerStyle]}

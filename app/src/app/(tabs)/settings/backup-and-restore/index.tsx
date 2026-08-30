@@ -1,10 +1,10 @@
 import ConfirmationDialog from '@/components/presentation/foundation/confirmation-dialog';
-import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import LimitedHtml from '@/components/presentation/foundation/limited-html';
-import ListSwitch from '@/components/presentation/foundation/list-switch';
+import { SettingsPage } from '@/components/layout/settings-page';
+import { SegmentedGroup, SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
+import { SegmentedListLink } from '@/components/presentation/foundation/segmented-list-link';
 import { useActionEffect } from '@/hooks/useActionEffect';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { useAppSelector } from '@/store';
 import {
   addFollower,
   clearFeedState,
@@ -14,74 +14,74 @@ import {
   setIdentity,
   upsertFeedItems,
 } from '@/store/feed';
-import { beginFeedImport, exportData, importData, setBackupReminder } from '@/store/settings';
+import { beginFeedImport, exportData, importData } from '@/store/settings';
 import { setStatsIsDirty } from '@/store/stats';
 
-import { T, useTranslate } from '@tolgee/react';
-import { Stack, useRouter } from 'expo-router';
+import { useTranslate } from '@tolgee/react';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { List } from 'react-native-paper';
 import { useDispatch } from 'react-redux';
-import { HealthExportSwitch } from '@/components/smart/health-export-switch';
+import { HealthExportSwitch, useCanExportHealth } from '@/components/smart/health-export-switch';
 import { RemoteData } from '@/models/remote';
 import { FeedBackupData } from '@/models/backup';
 
 export default function BackupAndRestorePage() {
   const { t } = useTranslate();
   const dispatch = useDispatch();
-  const backupReminders = useAppSelector((s) => s.settings.backupReminder);
   const { push } = useRouter();
   const [feedImportDialogOpen, setFeedImportDialogOpen] = useState(false);
   const [feedExportDialogOpen, setFeedExportDialogOpen] = useState(false);
+  const canExportHealth = useCanExportHealth();
   return (
-    <FullHeightScrollView>
-      <Stack.Screen options={{ title: t('backup.export_backup_restore.title') }} />
-      <List.Section>
-        <List.Item
-          title={t('backup.backup_data.title')}
-          description={t('backup.backup_data.subtitle')}
-          left={(props) => <List.Icon icon={'backup'} {...props} />}
+    <SettingsPage title={t('backup.export_backup_restore.title')} caption={t('backup.export_backup_restore.subtitle')}>
+      <SegmentedGroup>
+        <SegmentListFormElement
+          label={t('backup.backup_data.title')}
+          supportingText={t('backup.backup_data.subtitle')}
+          icon={'backup'}
           onPress={() => setFeedExportDialogOpen(true)}
         />
-        <List.Item
-          title={t('backup.restore_data.title')}
-          description={t('backup.restore_data.subtitle')}
-          left={(props) => <List.Icon icon={'history'} {...props} />}
+        <SegmentListFormElement
+          label={t('backup.restore_data.title')}
+          supportingText={t('backup.restore_data.subtitle')}
+          icon={'history'}
           onPress={() => {
             dispatch(importData());
             dispatch(setStatsIsDirty(true));
           }}
         />
-        <List.Item
-          title={t('backup.automatic_remote.title')}
-          description={t('backup.automatic_remote.subtitle')}
-          left={(props) => <List.Icon icon={'cloudUpload'} {...props} />}
+      </SegmentedGroup>
+
+      <SegmentedGroup>
+        <SegmentedListLink
+          label={t('backup.automatic_remote.title')}
+          supportingText={t('backup.automatic_remote.subtitle')}
+          icon={'cloudUpload'}
           onPress={() => push('/settings/backup-and-restore/remote-backup')}
         />
-        <List.Item
-          title={t('backup.import_from_other_apps.title')}
-          description={t('backup.import_from_other_apps.subtitle')}
-          left={(props) => <List.Icon icon={'download'} {...props} />}
+        <SegmentedListLink
+          label={t('backup.import_from_other_apps.title')}
+          supportingText={t('backup.import_from_other_apps.subtitle')}
+          icon={'download'}
           onPress={() => push('/settings/backup-and-restore/import-from-other-apps')}
         />
-        <List.Item
-          title={t('backup.plaintext_export.title')}
-          description={t('backup.plaintext_export.subtitle')}
-          left={(props) => <List.Icon icon={'description'} {...props} />}
+        <SegmentedListLink
+          label={t('backup.plaintext_export.title')}
+          supportingText={t('backup.plaintext_export.subtitle')}
+          icon={'description'}
           onPress={() => push('/settings/backup-and-restore/plain-text-export')}
         />
-        <HealthExportSwitch />
+      </SegmentedGroup>
 
-        <ListSwitch
-          headline={<T keyName="backup.reminders.title" />}
-          supportingText={<T keyName="backup.reminders.subtitle" />}
-          value={backupReminders}
-          onValueChange={(value) => dispatch(setBackupReminder(value))}
-        />
-      </List.Section>
+      {canExportHealth ? (
+        <SegmentedGroup>
+          <HealthExportSwitch />
+        </SegmentedGroup>
+      ) : undefined}
+
       <ImportFeedDialog open={feedImportDialogOpen} setOpen={setFeedImportDialogOpen} />
       <ExportFeedDialog open={feedExportDialogOpen} setOpen={setFeedExportDialogOpen} />
-    </FullHeightScrollView>
+    </SettingsPage>
   );
 }
 

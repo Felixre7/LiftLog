@@ -2,7 +2,8 @@ import ItemTitle from '@/components/presentation/foundation/item-title';
 import { spacing } from '@/hooks/useAppTheme';
 import { RecordedExercise, RecordedWeightedExercise } from '@/models/session-models';
 import { ReactNode, useState } from 'react';
-import { Linking, View } from 'react-native';
+import { View } from 'react-native';
+import { openUrl } from '@/utils/open-url';
 import { Tooltip } from 'react-native-paper';
 import Menu, { MenuItem } from '@/components/presentation/foundation/menu';
 import { useTranslate } from '@tolgee/react';
@@ -30,9 +31,6 @@ interface ExerciseSectionProps<T extends RecordedExercise> {
 
 export default function ExerciseSection<T extends RecordedExercise>(props: ExerciseSectionProps<T>) {
   const { updateExercise, onRemoveExercise } = props;
-  const openUrl = (url: string) => {
-    void Linking.canOpenURL(url).then(() => Linking.openURL(url));
-  };
   const { t } = useTranslate();
   const { push } = useRouter();
   const { recordedExercise } = props;

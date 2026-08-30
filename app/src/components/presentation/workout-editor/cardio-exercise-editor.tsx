@@ -115,7 +115,6 @@ function CardioSetEditor(props: {
         />
       )}
       <SegmentedList
-        renderItem={(i) => i}
         items={[
           <SegmentedListSwitch
             key="track-time"

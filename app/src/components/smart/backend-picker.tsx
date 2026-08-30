@@ -1,6 +1,4 @@
-import LabelledFormRow from '@/components/presentation/foundation/labelled-form-row';
 import SelectPicker from '@/components/presentation/foundation/select-picker';
-import { AppIconSource } from '@/components/presentation/foundation/ms-icon-source';
 import { BackendFeature, BackendId, canBeSetToNoBackend } from '@/models/backend';
 import { useAppSelectorWithArg } from '@/store';
 import {

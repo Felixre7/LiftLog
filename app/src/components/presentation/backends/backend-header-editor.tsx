@@ -38,17 +38,12 @@ export function BackendHeaderEditor(props: { headers: BackendHeader[]; onChange:
   return (
     <>
       <SegmentedList
-        renderItem={(x) => x}
         items={[
           <SegmentListFormElement
             key="title"
             label={t('backends.headers.label')}
             icon={'vpnKeyFill'}
-            line2={
-              <Text variant="bodySmall" style={bodyStyle}>
-                {t('backends.headers.explanation')}
-              </Text>
-            }
+            supportingText={t('backends.headers.explanation')}
           />,
           ...headers.map((header, index) => (
             <SegmentListFormElement

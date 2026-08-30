@@ -1,68 +1,46 @@
-import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
-import Form from '@/components/presentation/foundation/form';
-import LabelledFormRow from '@/components/presentation/foundation/labelled-form-row';
-import { SurfaceText } from '@/components/presentation/foundation/surface-text';
-import { spacing } from '@/hooks/useAppTheme';
+import { SettingsPage } from '@/components/layout/settings-page';
 import { exportPlainText, PlaintextExportFormat } from '@/store/settings';
-import { T, useTranslate } from '@tolgee/react';
-import { Stack } from 'expo-router';
+import { useTranslate } from '@tolgee/react';
 import { useState } from 'react';
-import { Linking, View } from 'react-native';
-import { Card } from 'react-native-paper';
-import Button from '@/components/presentation/foundation/button';
-import { Dropdown } from 'react-native-paper-dropdown';
 import { useDispatch } from 'react-redux';
+import { SegmentedGroup } from '@/components/presentation/foundation/segmented-list';
+import { SegmentedListSelect } from '@/components/presentation/foundation/segmented-list-select';
+import { PageActions } from '@/components/presentation/foundation/page-actions';
+import ExportIcon from '@expo/material-symbols/file_export.xml';
 
 export default function PlainTextExportPage() {
   const { t } = useTranslate();
   const dispatch = useDispatch();
   const [format, setFormat] = useState<PlaintextExportFormat>('CSV');
-  const exportData = () => {
-    dispatch(exportPlainText({ format }));
-  };
-  const openUrl = (url: string) => {
-    void Linking.canOpenURL(url).then(() => Linking.openURL(url));
-  };
   return (
-    <FullHeightScrollView>
-      <Stack.Screen options={{ title: t('backup.plaintext_export.title') }} />
-      <Card mode="contained" style={{ marginHorizontal: spacing[6], marginBottom: spacing[4] }}>
-        <Card.Content>
-          <View>
-            <SurfaceText style={{ textAlign: 'center' }}>
-              <T keyName="backup.plaintext_export.explanation" />
-            </SurfaceText>
-          </View>
-          <Button onPress={() => openUrl('https://github.com/LiamMorrow/LiftLog/blob/main/docs/PlaintextExport.md')}>
-            <T keyName="generic.read_documentation.button" />
-          </Button>
-        </Card.Content>
-      </Card>
-      <Form>
-        <LabelledFormRow label={t('backup.plaintext_export.format.label')} icon={'descriptionFill'}>
-          <Dropdown
-            options={[
-              { label: 'CSV', value: 'CSV' },
-              { label: 'JSON', value: 'JSON' },
-            ]}
-            value={format}
-            mode="outlined"
-            onSelect={(s) => s && setFormat(s as PlaintextExportFormat)}
-          ></Dropdown>
-        </LabelledFormRow>
-      </Form>
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'flex-end',
-          gap: spacing[4],
-          margin: spacing[6],
-        }}
-      >
-        <Button mode="contained" onPress={exportData}>
-          <T keyName="generic.export.button" />
-        </Button>
-      </View>
-    </FullHeightScrollView>
+    <SettingsPage
+      title={t('backup.plaintext_export.title')}
+      caption={t('backup.plaintext_export.explanation')}
+      docs="PlaintextExport.md"
+      actions={
+        <PageActions
+          primaryKind="commit"
+          primary={{
+            label: t('generic.export.button'),
+            onPress: () => dispatch(exportPlainText({ format })),
+            icon: ExportIcon,
+            systemImage: 'square.and.arrow.up',
+          }}
+        />
+      }
+    >
+      <SegmentedGroup>
+        <SegmentedListSelect
+          label={t('backup.plaintext_export.format.label')}
+          icon={'descriptionFill'}
+          value={format}
+          options={[
+            { value: 'CSV', label: 'CSV' },
+            { value: 'JSON', label: 'JSON' },
+          ]}
+          onChange={setFormat}
+        />
+      </SegmentedGroup>
+    </SettingsPage>
   );
 }

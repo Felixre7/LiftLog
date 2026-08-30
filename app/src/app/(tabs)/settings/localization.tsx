@@ -1,19 +1,19 @@
-import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
-import ListSwitch from '@/components/presentation/foundation/list-switch';
-import SelectPicker, { SelectPickerOption } from '@/components/presentation/foundation/select-picker';
+import { SettingsPage } from '@/components/layout/settings-page';
+import { SegmentedGroup } from '@/components/presentation/foundation/segmented-list';
+import { SegmentedListSwitch } from '@/components/presentation/foundation/segmented-list-switch';
+import { SegmentedListSelect } from '@/components/presentation/foundation/segmented-list-select';
+import { SelectPickerOption } from '@/components/presentation/foundation/select-picker';
 import { supportedLanguages } from '@/services/tolgee';
 import { RootState, useAppSelector } from '@/store';
 import { setFirstDayOfWeek, setPreferredLanguage, setUseImperialUnits } from '@/store/settings';
 import { getDateOnDay } from '@/utils/format-date';
 import { DayOfWeek } from '@js-joda/core';
-import { T, useTranslate } from '@tolgee/react';
-import { Stack } from 'expo-router';
+import { useTranslate } from '@tolgee/react';
 import { useMemo } from 'react';
-import { List } from 'react-native-paper';
 import { useDispatch } from 'react-redux';
 import { useFormatDate } from '@/hooks/useFormatDate';
 
-export default function Localization() {
+export default function LocalizationPage() {
   const formatDate = useFormatDate();
   const { t } = useTranslate();
   const settings = useAppSelector((state: RootState) => state.settings);
@@ -75,41 +75,35 @@ export default function Localization() {
   );
 
   return (
-    <FullHeightScrollView>
-      <Stack.Screen options={{ title: t('settings.localisation.title') }} />
-      <List.Section>
-        <ListSwitch
+    <SettingsPage title={t('settings.localisation.title')} caption={t('settings.localisation.subtitle')}>
+      <SegmentedGroup>
+        <SegmentedListSwitch
           testID="setUseImperialUnits"
-          headline={<T keyName="settings.use_imperial_units.label" />}
-          supportingText={<T keyName="settings.use_imperial_units.subtitle" />}
+          icon={'weight'}
+          label={t('settings.use_imperial_units.label')}
+          supportingText={t('settings.use_imperial_units.subtitle')}
           value={settings.useImperialUnits}
           onValueChange={(value) => dispatch(setUseImperialUnits(value))}
         />
-        <List.Item
-          title={t('settings.first_day_of_week.label')}
-          description={t('settings.first_day_of_week.subtitle')}
-          right={() => (
-            <SelectPicker
-              testID="setFirstDayOfWeek"
-              value={settings.firstDayOfWeek}
-              options={daysOfWeekOptions}
-              onChange={(value) => dispatch(setFirstDayOfWeek(value))}
-            />
-          )}
+        <SegmentedListSelect
+          testID="setFirstDayOfWeek"
+          icon={'calendar'}
+          label={t('settings.first_day_of_week.label')}
+          supportingText={t('settings.first_day_of_week.subtitle')}
+          value={settings.firstDayOfWeek}
+          options={daysOfWeekOptions}
+          onChange={(value) => dispatch(setFirstDayOfWeek(value))}
         />
-        <List.Item
-          title={t('settings.set_language.button')}
-          description={t('settings.set_language.subtitle')}
-          right={() => (
-            <SelectPicker
-              testID="setPreferredLanguage"
-              value={settings.preferredLanguage}
-              options={languageOptions}
-              onChange={(value) => dispatch(setPreferredLanguage(value))}
-            />
-          )}
+        <SegmentedListSelect
+          testID="setPreferredLanguage"
+          icon={'language'}
+          label={t('settings.set_language.button')}
+          supportingText={t('settings.set_language.subtitle')}
+          value={settings.preferredLanguage}
+          options={languageOptions}
+          onChange={(value) => dispatch(setPreferredLanguage(value))}
         />
-      </List.Section>
-    </FullHeightScrollView>
+      </SegmentedGroup>
+    </SettingsPage>
   );
 }

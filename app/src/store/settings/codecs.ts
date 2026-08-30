@@ -5,6 +5,8 @@ export type ColorSchemeSeed = 'default' | `#${string}`;
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
+export type PlansSortOrder = 'name' | 'recent';
+
 // A codec maps between a preference's runtime value and its on-disk string.
 // `deserialize` returns undefined when the key is absent or unparseable, so the
 // caller falls back to the descriptor default. `serialize` returns undefined to
@@ -46,6 +48,14 @@ export const themeModeCodec: Codec<ThemeMode> = {
   deserialize: (raw) =>
     match(raw)
       .with('light', 'dark', 'system', (v) => v)
+      .otherwise(() => undefined),
+  serialize: (value) => value,
+};
+
+export const plansSortOrderCodec: Codec<PlansSortOrder> = {
+  deserialize: (raw) =>
+    match(raw)
+      .with('name', 'recent', (v) => v)
       .otherwise(() => undefined),
   serialize: (value) => value,
 };

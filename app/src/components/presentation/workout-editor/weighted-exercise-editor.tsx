@@ -2,8 +2,8 @@ import FixedIncrementer from '@/components/presentation/foundation/editors/fixed
 import { FormRow } from '@/components/presentation/foundation/form-row';
 import RestFormat from '@/components/presentation/foundation/rest-format';
 import SegmentedPicker from '@/components/presentation/foundation/segmented-picker';
-import SelectPicker from '@/components/presentation/foundation/select-picker';
 import { SegmentedList, SegmentListFormElement } from '@/components/presentation/foundation/segmented-list';
+import { SegmentedListSelect } from '@/components/presentation/foundation/segmented-list-select';
 import { SegmentedListSwitch } from '@/components/presentation/foundation/segmented-list-switch';
 import { RestEditorDialog } from '@/components/presentation/workout-editor/rest-editor-dialog';
 import { ProgressionRulesEditor } from '@/components/presentation/workout-editor/progressive-overload';
@@ -22,7 +22,6 @@ import { ExtractType } from '@/utils/extract-type';
 import { TranslationKey, useTranslate } from '@tolgee/react';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { Text } from 'react-native-paper';
 
 /**
  * What each choice actually changes, since "resistance" names the field without saying what picking one
@@ -141,23 +140,15 @@ export function WeightedExerciseEditor({
               testID="exercise-superset"
               onValueChange={(supersetWithNext) => updateExercise({ supersetWithNext })}
             />,
-            <SegmentListFormElement
+            <SegmentedListSelect
               key={4}
               label={t('exercise.resistance.label')}
               icon={'directionsRun'}
-              right={
-                <SelectPicker
-                  testID="load-basis"
-                  value={exercise.resistance}
-                  options={resistanceOptions.map(({ value, label }) => ({ value, label: t(label) }))}
-                  onChange={(resistance: Resistance) => updateExercise({ resistance })}
-                />
-              }
-              line2={
-                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBlockStart: spacing[2] }}>
-                  {t(resistanceOptions.find((option) => option.value === exercise.resistance)!.body)}
-                </Text>
-              }
+              testID="load-basis"
+              value={exercise.resistance}
+              options={resistanceOptions.map(({ value, label }) => ({ value, label: t(label) }))}
+              onChange={(resistance: Resistance) => updateExercise({ resistance })}
+              supportingText={t(resistanceOptions.find((option) => option.value === exercise.resistance)!.body)}
             />,
             <SegmentListFormElement
               key={3}
@@ -171,7 +162,6 @@ export function WeightedExerciseEditor({
               }
             />,
           ]}
-          renderItem={(i) => i}
         />
       </FormRow>
     </View>
