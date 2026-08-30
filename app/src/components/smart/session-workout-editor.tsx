@@ -4,11 +4,12 @@ import { useAppSelectorWithArg } from '@/store';
 import { selectSession, updateStoredSession } from '@/store/stored-sessions';
 import { useTranslate } from '@tolgee/react';
 import { Href, Stack, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { useContext, useEffect, useRef, useState } from 'react';
+import { Platform, View } from 'react-native';
 import { TextInput } from 'react-native-paper';
 import { useDispatch } from 'react-redux';
 import { useOnDismiss } from '@/hooks/useOnDismiss';
+import { HeaderHeightContext } from 'expo-router/react-navigation';
 
 export function getSessionWorkoutEditorHref(sessionId: string): Href {
   return `/workout-editor?sessionId=${encodeURIComponent(sessionId)}` as Href;
@@ -19,6 +20,8 @@ export function SessionWorkoutEditor(props: { sessionId: string }) {
   const workout = useAppSelectorWithArg(selectSession, props.sessionId);
   const dispatch = useDispatch();
   const { dismiss } = useRouter();
+  const headerHeight = useContext(HeaderHeightContext); // Intentionally don't use useHeaderHeight as it might not be in a stack
+  const topInsetHeight = Platform.select({ ios: headerHeight }) ?? 0;
 
   const title = t('workout.edit.button');
 
@@ -53,7 +56,11 @@ export function SessionWorkoutEditor(props: { sessionId: string }) {
   }, [hasWorkout, dismiss]);
 
   return (
-    <FullHeightScrollView avoidKeyboard scrollStyle={{ padding: spacing.pageHorizontalMargin }}>
+    <FullHeightScrollView
+      avoidKeyboard
+      scrollStyle={{ padding: spacing.pageHorizontalMargin }}
+      contentContainerStyle={{ insetBlockStart: topInsetHeight }}
+    >
       <Stack.Screen options={{ title }} />
       {workout ? (
         <View style={{ gap: spacing[2] }}>

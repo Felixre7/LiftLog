@@ -18,7 +18,7 @@ const connectionKeyFor = (backend: ResolvedBackendForFeature) => JSON.stringify(
  */
 export class AiChatServiceV2 {
   private connection: HubConnection | undefined;
-  /** Which backend the live connection was opened against. A chat lives on the server holding it. */
+  /** Which backend the live connection was opened against.  */
   private connectedTo: string | undefined;
   constructor(
     private hubConnectionFactory: HubConnectionFactory,
