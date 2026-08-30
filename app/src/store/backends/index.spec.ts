@@ -67,6 +67,21 @@ describe('selectResolvedBackend', () => {
     expect(selectBackendForFeature(state, 'feed')?.headers).toEqual({ 'X-Api-Key': 'secret' });
   });
 
+  it('sends the pro token to the built-in planner in the format the server parses', () => {
+    const state = stateWith({ assignments: { aiPlanner: builtInBackend.id } });
+
+    const resolved = selectBackendForFeature(state, 'aiPlanner');
+
+    expect(resolved?.headers).toEqual({ Authorization: 'Bearer RevenueCat hi' });
+    expect(resolved?.requiresPro).toBe(false);
+  });
+
+  it('keeps the pro token off a self-hosted planner', () => {
+    const state = stateWith({ backends: [selfHosted], assignments: { aiPlanner: 'self' } });
+
+    expect(selectBackendForFeature(state, 'aiPlanner')?.headers).toEqual({ 'X-Api-Key': 'secret' });
+  });
+
   it('resolves nothing when an assignment dangles', () => {
     const state = stateWith({ backends: [], assignments: { feed: 'deleted-backend' } });
 

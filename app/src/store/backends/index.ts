@@ -166,5 +166,5 @@ function getProTokenHeaders(proToken: string | undefined): BackendHeader[] {
   if (__DEV__) {
     return [{ name: 'X-API-Key', value: proToken }];
   }
-  return [{ name: 'Authorization', value: 'Bearer ' + proToken }];
+  return [{ name: 'Authorization', value: `Bearer RevenueCat ${proToken}` }];
 }
