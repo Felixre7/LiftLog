@@ -13,7 +13,12 @@ import {
   normalizeBackendUrl,
   ReportedBackendFeature,
 } from '@/models/backend';
-import { BackendProbeResult, probeBackendFeatures, probeBackupEndpoint } from '@/services/backend-probe';
+import {
+  BackendProbeFailure,
+  BackendProbeResult,
+  probeBackendFeatures,
+  probeBackupEndpoint,
+} from '@/services/backend-probe';
 import { useAppSelector } from '@/store';
 import { putBackend, removeBackend } from '@/store/backends';
 import { T, TranslationKey, useTranslate } from '@tolgee/react';
@@ -34,6 +39,9 @@ const kindOptions = [
 ] as const satisfies { value: BackendKind; label: TranslationKey; body: TranslationKey }[];
 
 type ProbeState = { status: 'idle' } | { status: 'checking' } | { status: 'done'; message: string; ok: boolean };
+
+/** HTTP/2 has no reason phrase, so the code stands alone rather than trailing a space. */
+const statusLabel = (statusCode: number, statusText: string) => [statusCode, statusText].filter(Boolean).join(' ');
 
 /** What a test result is a result for: the same values tested again would answer the same. */
 const probeSignatureOf = (backend: Backend) => JSON.stringify([backend.url, backend.kind, backend.headers]);
@@ -88,12 +96,41 @@ function BackendEditor({ backend }: { backend: Backend }) {
   const featureName = (feature: string) =>
     feature in backendFeatureNameKey ? t(backendFeatureNameKey[feature as ReportedBackendFeature]) : feature;
 
-  const describeProbe = (result: BackendProbeResult) =>
-    result.status === 'ok'
-      ? t('backends.test.offers', { features: result.features.map(featureName).join(', ') })
-      : result.status === 'notLiftLog'
-        ? t('backends.test.not_liftlog')
-        : t('backends.test.unreachable');
+  // A failed test is only useful if it says what the server did, so every line we have is shown.
+  const lines = (...parts: (string | undefined)[]) => parts.filter(Boolean).join('\n');
+
+  const describeFailure = (failure: BackendProbeFailure) => {
+    switch (failure.kind) {
+      case 'httpError':
+        return t('backends.test.http_error', { status: statusLabel(failure.statusCode, failure.statusText) });
+      case 'notJson':
+        return failure.contentType
+          ? t('backends.test.not_json_content_type', { contentType: failure.contentType })
+          : t('backends.test.not_json');
+      case 'notFeatureObject':
+        return t('backends.test.not_feature_object');
+    }
+  };
+
+  const describeUnreachable = (error: string) =>
+    error ? t('backends.test.unreachable_detail', { error }) : t('backends.test.unreachable');
+
+  const describeBody = (body: string) => (body ? t('backends.test.response_body', { body }) : undefined);
+
+  const describeProbe = (result: BackendProbeResult) => {
+    switch (result.status) {
+      case 'ok':
+        return t('backends.test.offers', { features: result.features.map(featureName).join(', ') });
+      case 'notLiftLog':
+        return lines(
+          describeFailure(result.failure),
+          describeBody(result.failure.body),
+          t('backends.test.not_liftlog'),
+        );
+      case 'unreachable':
+        return describeUnreachable(result.error);
+    }
+  };
 
   const test = async () => {
     setProbe({ status: 'checking' });
@@ -107,8 +144,13 @@ function BackendEditor({ backend }: { backend: Backend }) {
           result.status === 'ok'
             ? t('backends.test.backup_ok')
             : result.status === 'refused'
-              ? t('backends.test.backup_refused', { status: result.statusCode })
-              : t('backends.test.unreachable'),
+              ? lines(
+                  t('backends.test.backup_refused', {
+                    status: statusLabel(result.statusCode, result.statusText),
+                  }),
+                  describeBody(result.body),
+                )
+              : describeUnreachable(result.error),
       });
       return;
     }

@@ -10,11 +10,14 @@ import { View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Chip, Dialog, Portal, Text, TextInput } from 'react-native-paper';
 
-const commonHeaderNames = ['Authorization', 'X-API-Key'];
+const commonHeaderNames = ['Authorization', 'Proxy-Authorization', 'X-API-Key'];
 
-const secretHeaderNames = ['authorization', 'x-api-key'];
+const secretHeaderNames = ['authorization', 'proxy-authorization', 'x-api-key'];
 
-const isAuthorizationHeader = (name: string) => name.trim().toLowerCase() === 'authorization';
+// Both carry the same `<scheme> <credentials>` value, so both can be filled in as a username and password.
+const basicAuthHeaderNames = ['authorization', 'proxy-authorization'];
+
+const takesBasicAuth = (name: string) => basicAuthHeaderNames.includes(name.trim().toLowerCase());
 
 const isSecretHeader = (name: string) => secretHeaderNames.includes(name.trim().toLowerCase());
 
@@ -97,7 +100,7 @@ function HeaderDialog(props: {
   onConfirm: (header: BackendHeader) => void;
 }) {
   const { t } = useTranslate();
-  const initialCredentials = isAuthorizationHeader(props.initial.name)
+  const initialCredentials = takesBasicAuth(props.initial.name)
     ? parseBasicAuthHeaderValue(props.initial.value)
     : undefined;
   const [name, setName] = useState(props.initial.name);
@@ -107,7 +110,7 @@ function HeaderDialog(props: {
   const [password, setPassword] = useState(initialCredentials?.password ?? '');
   const [revealed, setRevealed] = useState(false);
 
-  const isBasic = isAuthorizationHeader(name) && scheme === 'basic';
+  const isBasic = takesBasicAuth(name) && scheme === 'basic';
   const canConfirm = !!name.trim() && (isBasic ? !!username.trim() : !!value.trim());
   const confirm = () =>
     props.onConfirm({
@@ -153,7 +156,7 @@ function HeaderDialog(props: {
                 </Chip>
               ))}
             </View>
-            {isAuthorizationHeader(name) && (
+            {takesBasicAuth(name) && (
               <View style={{ width: '100%' }}>
                 <SegmentedPicker
                   value={scheme}
