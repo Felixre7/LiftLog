@@ -5,7 +5,7 @@ import { AddEffectFn } from '@/store/store';
 import { upsertSavedPlans } from '@/store/program';
 import { beginFeedImport, importBackupData, importData, importDataProto, importDataSql } from '@/store/settings';
 import { upsertStoredSessions } from '@/store/stored-sessions';
-import { streamToUint8Array } from '@/utils/stream';
+import { streamToUint8Array, writeInChunks } from '@/utils/stream';
 import { sleep } from '@/utils/sleep';
 import { Session } from '@/models/session-models';
 import { ProgramBlueprint } from '@/models/blueprint-models';
@@ -230,15 +230,10 @@ async function unGzipIfZipped(bytes: Uint8Array, logger: Logger): Promise<Uint8A
     const stream = new DecompressionStream('gzip');
 
     const writer = stream.writable.getWriter();
-    const readable = stream.readable;
 
     // Start reading from the stream immediately
-    const decompressPromise = streamToUint8Array(readable);
-    const chunkSize = 8192; // 8KB chunks
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      const chunk = bytes.slice(i, i + chunkSize);
-      await writer.write(chunk);
-    }
+    const decompressPromise = streamToUint8Array(stream.readable);
+    await writeInChunks(writer, bytes);
     await writer.close();
     const gunzipped = await decompressPromise;
     return gunzipped;

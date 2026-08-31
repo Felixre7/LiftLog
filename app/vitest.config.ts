@@ -1,5 +1,4 @@
 import { defineConfig, Plugin } from 'vitest/config';
-import tsconfigPaths from 'vite-tsconfig-paths';
 import { resolve } from 'path';
 const sqlShim: Plugin = {
   name: 'sql-files',
@@ -56,5 +55,8 @@ export default defineConfig({
       ],
     },
   },
-  plugins: [sqlShim, expoSqliteShim, tsconfigPaths()],
+  resolve: {
+    tsconfigPaths: true,
+  },
+  plugins: [sqlShim, expoSqliteShim],
 });

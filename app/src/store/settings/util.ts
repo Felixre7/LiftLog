@@ -1,4 +1,4 @@
-import { streamToUint8Array } from '@/utils/stream';
+import { streamToUint8Array, writeInChunks } from '@/utils/stream';
 import { backupDatabaseAsync, openDatabaseAsync, SQLiteDatabase } from 'expo-sqlite';
 
 // A source database can predate a table (an old export being re-exported), so clear only what is
@@ -40,12 +40,10 @@ export async function getBackupBytes(options: { includeFeed: boolean; expoDb: SQ
     const bytes = await backupDatabase.serializeAsync();
     const stream = new CompressionStream('gzip');
     const writer = stream.writable.getWriter();
-    // Don't await this until we start reading
-    const writePromise = writer.write(bytes);
-    const readable = stream.readable;
-    const gzippedPromise = streamToUint8Array(readable);
+    // Start draining before writing, or the chunked writes stall on backpressure.
+    const gzippedPromise = streamToUint8Array(stream.readable);
 
-    await writePromise;
+    await writeInChunks(writer, bytes);
     await writer.close();
     return await gzippedPromise;
   } finally {
