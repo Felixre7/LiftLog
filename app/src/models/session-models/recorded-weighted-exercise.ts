@@ -1,5 +1,4 @@
 import { MovementKey, ProgressionKey, RepsTarget, WeightedExerciseBlueprint } from '@/models/blueprint-models';
-import { TemporalComparer } from '@/models/comparers';
 import { RecordedExercise } from '@/models/session-models/recorded-exercise';
 
 import {
@@ -12,7 +11,6 @@ import {
 import { Weight, WeightUnit } from '@/models/weight';
 import { IndexOutOfBoundsError } from '@/utils/index-out-of-bounds';
 import { Duration, OffsetDateTime } from '@js-joda/core';
-import Enumerable from 'linq';
 import { match } from 'ts-pattern';
 
 export type WeightAppliesTo = 'thisSet' | 'uncompletedSets' | 'allSets';
@@ -209,12 +207,30 @@ export class RecordedWeightedExercise {
     );
   }
 
-  get currentSetIndex() {
-    return this.potentialSets.findIndex((x) => !x.set);
+  get isStarted() {
+    return this.potentialSets.some((x) => x.set !== undefined);
   }
 
-  get isStarted() {
-    return !!this.firstRecordedSet;
+  get lastRecordedSet(): PotentialSet | undefined {
+    let best: PotentialSet | undefined;
+    for (const ps of this.potentialSets) {
+      if (!ps.set) continue;
+      if (!best || ps.set.completionDateTime.isAfter(best.set!.completionDateTime)) best = ps;
+    }
+    return best;
+  }
+
+  get firstRecordedSet(): PotentialSet | undefined {
+    let best: PotentialSet | undefined;
+    for (const ps of this.potentialSets) {
+      if (!ps.set) continue;
+      if (!best || ps.set.completionDateTime.isBefore(best.set!.completionDateTime)) best = ps;
+    }
+    return best;
+  }
+
+  get currentSetIndex() {
+    return this.potentialSets.findIndex((x) => !x.set);
   }
 
   get duration(): Duration | undefined {
@@ -227,20 +243,6 @@ export class RecordedWeightedExercise {
 
   get earliestTime(): OffsetDateTime | undefined {
     return this.firstRecordedSet?.set?.completionDateTime;
-  }
-
-  get lastRecordedSet(): PotentialSet | undefined {
-    const result = Enumerable.from(this.potentialSets)
-      .orderByDescending((x) => x.set?.completionDateTime, TemporalComparer)
-      .firstOrDefault((x) => x.set !== undefined);
-    return result;
-  }
-
-  get firstRecordedSet(): PotentialSet | undefined {
-    const result = Enumerable.from(this.potentialSets)
-      .orderBy((x) => x.set?.completionDateTime, TemporalComparer)
-      .firstOrDefault((x) => x.set !== undefined);
-    return result;
   }
 
   get isComplete(): boolean {

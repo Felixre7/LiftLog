@@ -22,9 +22,15 @@ export function AccordionItem({
 }: AccordionItemProps) {
   const animatedHeight = useRef(new Animated.Value(unexpandedHeight)).current;
   const measuredHeightRef = useRef(unexpandedHeight);
+  const settledHeightRef = useRef(unexpandedHeight);
 
   const animate = useCallback(() => {
     const targetHeight = isExpanded ? measuredHeightRef.current : unexpandedHeight;
+    if (settledHeightRef.current === targetHeight) {
+      onToggled?.(isExpanded);
+      return;
+    }
+    settledHeightRef.current = targetHeight;
     Animated.timing(animatedHeight, {
       toValue: targetHeight,
       duration,
@@ -44,6 +50,7 @@ export function AccordionItem({
     measuredHeightRef.current = height;
     if (isExpanded && startsExpanded) {
       animatedHeight.setValue(height);
+      settledHeightRef.current = height;
     }
     animate();
   };

@@ -1,8 +1,11 @@
 import BigNumber from 'bignumber.js';
 import { getLocales } from 'expo-localization';
 
+let usesComma: boolean | undefined;
+
 function localeUsesComma(): boolean {
-  return getLocales()[0].decimalSeparator === ',';
+  usesComma ??= getLocales()[0].decimalSeparator === ',';
+  return usesComma;
 }
 
 export function localeParseBigNumber(numStr: string): BigNumber {

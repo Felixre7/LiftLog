@@ -21,8 +21,13 @@ export default function FocusRing({
   padding ??= 5;
 
   const growAnim = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+  const settledSelection = useRef(isSelected);
 
   useEffect(() => {
+    if (settledSelection.current === isSelected) {
+      return;
+    }
+    settledSelection.current = isSelected;
     Animated.timing(growAnim, {
       toValue: isSelected ? 1 : 0,
       duration: ANIMATION_DURATION,
