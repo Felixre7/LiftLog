@@ -14,7 +14,13 @@ import { setStatsIsDirty, fetchOverallStats } from '@/store/stats';
 import { savePlan, setSavedPlans } from '@/store/program';
 import { ProgramBlueprint } from '@/models/blueprint-models';
 import { upsertStoredSessions, setStoredSessions } from '@/store/stored-sessions';
-import { setColorSchemeSeed, setRestNotifications, setWelcomeWizardCompleted } from '@/store/settings';
+import {
+  setColorSchemeSeed,
+  setLastSeenWhatsNewId,
+  setRestNotifications,
+  setWelcomeWizardCompleted,
+} from '@/store/settings';
+import { whatsNewEntries } from '@/models/whats-new';
 
 export default function ScreenshotCollectionPage() {
   const { type } = useLocalSearchParams<{ type: string }>();
@@ -24,6 +30,7 @@ export default function ScreenshotCollectionPage() {
   const dispatch = useDispatch();
   useMountEffect(() => {
     dispatch(setWelcomeWizardCompleted(true));
+    dispatch(setLastSeenWhatsNewId(whatsNewEntries.at(-1)!.id));
     dispatch(setColorSchemeSeed('#005500'));
     dispatch(setRestNotifications(false));
   });
