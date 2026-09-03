@@ -9,7 +9,7 @@ import { FeedIdentity } from '@/models/feed-models';
 import { ProgramBlueprint } from '@/models/blueprint-models';
 import { EmptySession, Session } from '@/models/session-models';
 import { uuid } from '@/utils/uuid';
-import { upsertStoredSessions } from '@/store/stored-sessions';
+import { upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
 import { upsertSavedPlans } from '@/store/program';
 import { showSnackbar } from '@/store/app';
 
@@ -35,6 +35,7 @@ describe('import-backup-effects', () => {
     expect(dispatchedImport.payload.workouts).toHaveLength(420);
     expect(dispatchedImport.payload.feed).toBeDefined();
     expect(Object.values(dispatchedImport.payload.programs)).toHaveLength(13);
+    expect(Object.values(dispatchedImport.payload.exercises ?? {})).toHaveLength(962);
     expect(dispatchedImport.payload.successMessage).toBe('Restore complete!');
   });
 
@@ -73,6 +74,18 @@ describe('import-backup-effects', () => {
 
     const mockWorkouts = [EmptySession, EmptySession.with({ id: uuid() })] as Session[];
     const mockPrograms = {} as Record<string, ProgramBlueprint>;
+    const mockExercises = {
+      custom: {
+        name: 'Custom exercise',
+        force: null,
+        level: '',
+        mechanic: null,
+        equipment: null,
+        muscles: [],
+        instructions: '',
+        category: '',
+      },
+    };
     const mockFeed: FeedBackupData = {
       identity: {} as FeedIdentity,
       feedItems: [],
@@ -85,6 +98,7 @@ describe('import-backup-effects', () => {
       importBackupData({
         workouts: mockWorkouts,
         programs: mockPrograms,
+        exercises: mockExercises,
         feed: mockFeed,
         successMessage: 'Restore complete!',
       }),
@@ -92,6 +106,7 @@ describe('import-backup-effects', () => {
 
     expect(testBed.getDispatchedAction(upsertStoredSessions).payload).toBe(mockWorkouts);
     expect(testBed.getDispatchedAction(upsertSavedPlans).payload).toBe(mockPrograms);
+    expect(testBed.getDispatchedAction(upsertExercises).payload).toBe(mockExercises);
     expect(testBed.getDispatchedAction(showSnackbar).payload.text).toBe('Restore complete!');
     expect(testBed.getDispatchedAction(beginFeedImport).payload).toBe(mockFeed);
   });

@@ -20,6 +20,7 @@ import {
   setStoredSessions,
   deleteStoredSession,
   updateExercise,
+  upsertExercises,
   deleteExercise,
   restoreExercise,
   setExercises,
@@ -273,6 +274,15 @@ describe('storedSessions reducer', () => {
 
     state = storedSessionsReducer(state, setExercises({ '3': squat }));
     expect(Object.keys(state.savedExercises)).toEqual(['3']);
+  });
+
+  it('upserts restored exercises without replacing existing ones', () => {
+    const existing = exerciseDescriptor({ name: 'Existing' });
+    const restored = exerciseDescriptor({ name: 'Restored' });
+
+    const state = reduce(updateExercise({ id: 'existing', exercise: existing }), upsertExercises({ restored }));
+
+    expect(state.savedExercises).toEqual({ existing, restored });
   });
 
   it('merges built-in and saved exercises, with saved overriding by id and sorted by name', () => {

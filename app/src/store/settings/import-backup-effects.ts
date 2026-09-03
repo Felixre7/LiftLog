@@ -4,7 +4,7 @@ import { showSnackbar } from '@/store/app';
 import { AddEffectFn } from '@/store/store';
 import { upsertSavedPlans } from '@/store/program';
 import { beginFeedImport, importBackupData, importData, importDataProto, importDataSql } from '@/store/settings';
-import { upsertStoredSessions } from '@/store/stored-sessions';
+import { upsertExercises, upsertStoredSessions } from '@/store/stored-sessions';
 import { streamToUint8Array, writeInChunks } from '@/utils/stream';
 import { sleep } from '@/utils/sleep';
 import { Session } from '@/models/session-models';
@@ -24,6 +24,7 @@ import { DatabaseMigrationService } from '@/services/database-migration-service'
 import { FeedBackupData } from '@/models/backup';
 import {
   dataMigrationsSchema,
+  exercisesSchema,
   feedFollowedUsersSchema,
   feedFollowerUsersSchema,
   feedFollowRequestsSchema,
@@ -41,11 +42,13 @@ import {
   sessionUserEventMigrations,
   followedFeedUserMigrations,
   followerFeedUserMigrations,
+  exerciseDescriptorMigrations,
   programBlueprintMigrations,
   sessionMigrations,
   pendingFeedUserMigrations,
 } from '@/models/storage/versions/migrations';
 import { FeedUserJSON } from '@/models/storage/versions/latest';
+import { fromExerciseDescriptorJSON } from '@/models/exercise-models';
 
 export function addImportBackupEffects(addEffect: AddEffectFn) {
   addEffect(importData, async (_, { dispatch, extra: { filePickerService, logger, tolgee } }) => {
@@ -81,9 +84,12 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
   });
 
   addEffect(importBackupData, async ({ payload }, { dispatch, extra: { db, databaseMigrationService } }) => {
-    const { workouts, programs, feed, successMessage } = payload;
+    const { workouts, programs, exercises, feed, successMessage } = payload;
     dispatch(upsertStoredSessions(workouts));
     dispatch(upsertSavedPlans(programs));
+    if (exercises) {
+      dispatch(upsertExercises(exercises));
+    }
     dispatch(
       showSnackbar({
         text: successMessage,
@@ -118,6 +124,13 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
         ),
         {},
       );
+      const exercises = (await drizzleBackupDb.select().from(exercisesSchema)).reduce(
+        toRecord(
+          (x) => x.id,
+          (x) => fromExerciseDescriptorJSON(exerciseDescriptorMigrations.migrate(x.payload)),
+        ),
+        {},
+      );
       const feedIdentityDb = (await drizzleBackupDb.select().from(feedIdentitySchema)).at(0);
 
       let feed: FeedBackupData | undefined;
@@ -146,6 +159,7 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
       dispatch(
         importBackupData({
           programs,
+          exercises,
           workouts,
           feed,
           successMessage: tolgee.t('Restore complete!'),

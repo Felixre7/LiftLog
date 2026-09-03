@@ -15,6 +15,7 @@ import {
   setStoredSessions,
   updateExercise,
   updateStoredSession,
+  upsertExercises,
   upsertStoredSessions,
 } from './index';
 import { fetchUpcomingSessions } from '@/store/program';
@@ -234,6 +235,25 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         id: action.payload.id,
         payload: toExerciseDescriptorJSON(action.payload.exercise),
       })
+      .onConflictDoUpdate({
+        target: exercisesSchema.id,
+        set: {
+          payload: sql.raw(`excluded.${exercisesSchema.payload.name}`),
+        },
+      });
+  });
+
+  addEffect(upsertExercises, async (action, { extra: { db } }) => {
+    const exercises = Object.entries(action.payload).map(([id, exercise]) => ({
+      id,
+      payload: toExerciseDescriptorJSON(exercise),
+    }));
+    if (!exercises.length) {
+      return;
+    }
+    await db
+      .insert(exercisesSchema)
+      .values(exercises)
       .onConflictDoUpdate({
         target: exercisesSchema.id,
         set: {
