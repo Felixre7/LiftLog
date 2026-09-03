@@ -12,12 +12,13 @@ import {
   sessionFinished,
   setActiveSessionId,
   setStoredSessions,
+  upsertExercises,
   upsertStoredSessions,
 } from '@/store/stored-sessions';
 import { addUnpublishedSessionId } from '@/store/feed';
 import { setStatsIsDirty } from '@/store/stats';
 import { createAddEffectTestBed } from '@/utils/__test__/add-effect-testbed';
-import { sessionsSchema } from '@/db/schema';
+import { exercisesSchema, sessionsSchema } from '@/db/schema';
 import { Session } from '@/models/session-models';
 import { toJsonString } from '@/models/storage/versions/latest';
 import type { RootState } from '@/store/store';
@@ -144,6 +145,25 @@ describe('stored-sessions effects', () => {
       const [row] = await db.select().from(sessionsSchema).where(eq(sessionsSchema.id, active.id));
       expect(row?.active).toBe(true);
     });
+  });
+
+  it('persists restored exercises', async () => {
+    const exercise = {
+      name: 'Custom exercise',
+      force: null,
+      level: '',
+      mechanic: null,
+      equipment: null,
+      muscles: [],
+      instructions: '',
+      category: '',
+    };
+    const testBed = bed({});
+
+    await testBed.dispatchHandled(upsertExercises({ custom: exercise }));
+
+    const [row] = await db.select().from(exercisesSchema).where(eq(exercisesSchema.id, 'custom'));
+    expect(row?.payload).toEqual(exercise);
   });
 
   describe('sessionFinished', () => {

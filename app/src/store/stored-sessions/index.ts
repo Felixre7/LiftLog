@@ -134,6 +134,10 @@ const storedSessionsSlice = createSlice({
       state.savedExercises[action.payload.id] = action.payload.exercise;
       state.hiddenBuiltInIds = state.hiddenBuiltInIds.filter((x) => x !== action.payload.id);
     },
+    upsertExercises(state, action: PayloadAction<Record<string, ExerciseDescriptor>>) {
+      Object.assign(state.savedExercises, action.payload);
+      state.hiddenBuiltInIds = state.hiddenBuiltInIds.filter((x) => !action.payload[x]);
+    },
     deleteExercise(state, action: PayloadAction<string>) {
       if (state.builtInExercises[action.payload]) {
         // Deleting a built-in tombstones it (its override row, if any, is kept for undo).
@@ -236,6 +240,7 @@ export const {
   setActiveSessionId,
   deleteStoredSession,
   updateExercise,
+  upsertExercises,
   deleteExercise,
   restoreExercise,
   setExercises,
