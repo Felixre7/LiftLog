@@ -59,7 +59,7 @@ class WorkoutNotificationManager(private val context: Context) {
 
         private const val REST_TONE_DURATION_MS = 600
         private const val REST_TONE_VOLUME_PERCENT = 100
-        private const val REST_TONE_TYPE = ToneGenerator.TONE_PROP_BEEP
+        private const val REST_TONE_TYPE = ToneGenerator.TONE_DTMF_5
 
         private val HEADPHONE_AUDIO_DEVICE_TYPES = setOf(
             AudioDeviceInfo.TYPE_BLE_HEADSET,
