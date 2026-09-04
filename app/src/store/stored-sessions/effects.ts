@@ -42,8 +42,15 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       if (!getState().settings.isHydrated) {
         throw new Error('Settings must be hydrated before stored sessions');
       }
+      const hydrateStoredSessionsStart = performance.now();
       await logger.time('initializeStoredSessions', async () => {
+        const loadRowsStart = performance.now();
         const rows = await db.select().from(sessionsSchema);
+        logger.info(
+          `loadStoredSessionRows completed in ${(performance.now() - loadRowsStart).toFixed(2)}ms (${rows.length} sessions)`,
+        );
+
+        const deserializeSessionsStart = performance.now();
         const storedSessions = rows.reduce(
           toRecord(
             (x) => x.id,
@@ -51,7 +58,13 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
           ),
           {},
         );
+        logger.info(
+          `deserializeStoredSessions completed in ${(performance.now() - deserializeSessionsStart).toFixed(2)}ms`,
+        );
+
+        const setStoredSessionsStart = performance.now();
         dispatch(setStoredSessions(storedSessions));
+        logger.info(`setStoredSessions completed in ${(performance.now() - setStoredSessionsStart).toFixed(2)}ms`);
         // Only when there is one: dispatching `undefined` would clear every flag in the table, and a
         // kill between that write and the migration below would lose the workout in progress.
         const activeRowId = rows.find((x) => x.active)?.id;
@@ -62,6 +75,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
 
       await migrateLegacyCurrentSession(dispatch, getState, keyValueStore, logger);
 
+      const loadSavedExercisesStart = performance.now();
       const savedExercises = (await db.select().from(exercisesSchema)).reduce(
         toRecord(
           (x) => x.id,
@@ -70,15 +84,29 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         {},
       );
       dispatch(setExercises(savedExercises));
+      logger.info(
+        `loadSavedExercises completed in ${(performance.now() - loadSavedExercisesStart).toFixed(2)}ms (${Object.keys(savedExercises).length} exercises)`,
+      );
 
+      const loadBuiltInExercisesStart = performance.now();
       const builtInExercises = await loadBuiltInExercises(getState().settings.preferredLanguage);
       dispatch(setBuiltInExercises(builtInExercises));
+      logger.info(
+        `loadBuiltInExercises completed in ${(performance.now() - loadBuiltInExercisesStart).toFixed(2)}ms (${Object.keys(builtInExercises).length} exercises)`,
+      );
 
+      const loadHiddenBuiltInIdsStart = performance.now();
       const hiddenBuiltInIds = JSON.parse(
         (await keyValueStore.getItem(hiddenBuiltInExerciseIdsStorageKey)) ?? '[]',
       ) as string[];
       dispatch(setHiddenBuiltInIds(hiddenBuiltInIds));
+      logger.info(
+        `loadHiddenBuiltInExerciseIds completed in ${(performance.now() - loadHiddenBuiltInIdsStart).toFixed(2)}ms`,
+      );
 
+      logger.info(
+        `hydrateStoredSessionsState completed in ${(performance.now() - hydrateStoredSessionsStart).toFixed(2)}ms`,
+      );
       dispatch(setIsHydrated(true));
       dispatch(fetchUpcomingSessions());
     },
