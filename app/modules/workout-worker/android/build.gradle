@@ -51,7 +51,7 @@ if (useManagedAndroidSdkVersions) {
 
 
 jsonSchemaCodegen {
-    inputFile = file('src/main/resources/schema')
+    inputFile = file('../../../../docs/schemas/workout-worker')
     configFile = file('src/main/resources/schema-codegen-config.json')
     packageName = 'com.limajuice.liftlog'
     outputDir = file('./build/generated-sources/kotlin')
@@ -77,6 +77,8 @@ android {
 
   sourceSets {
     main.kotlin.srcDirs += 'build/generated-sources/kotlin'
+    // Schemas configure code generation; they are not runtime APK resources.
+    main.resources.exclude 'schema', 'schema/**', 'schema-codegen-config.json'
   }
 }
 

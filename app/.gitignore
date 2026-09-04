@@ -50,3 +50,13 @@ shell.nix
 # Maestro local run output
 .maestro/**/screenshots
 .maestro/debug-output
+
+# Android module build caches and local outputs
+.gradle/
+.kotlin/
+.cxx/
+.externalNativeBuild/
+local.properties
+*.apk
+*.aab
+*.apks
