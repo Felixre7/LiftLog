@@ -7,9 +7,10 @@ import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioFocusRequest
 import android.media.AudioManager
-import android.media.MediaPlayer
-import android.media.RingtoneManager
+import android.media.ToneGenerator
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.core.app.NotificationCompat
@@ -40,11 +41,12 @@ enum class RestWindow(@DrawableRes val icon: Int) {
 class WorkoutNotificationManager(private val context: Context) {
 
     private val audioManager = context.getSystemService(AudioManager::class.java)
-    private var restTonePlayer: MediaPlayer? = null
+    private val restToneHandler = Handler(Looper.getMainLooper())
+    private var restToneGenerator: ToneGenerator? = null
     private var restToneAudioFocusRequest: AudioFocusRequest? = null
     private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         if (focusChange == AudioManager.AUDIOFOCUS_LOSS || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
-            releaseRestTonePlayer(audioManager)
+            releaseRestToneGenerator(audioManager)
         }
     }
 
@@ -54,6 +56,10 @@ class WorkoutNotificationManager(private val context: Context) {
 
         const val PERSISTENT_CHANNEL_ID = "workout_channel"
         const val REST_CHANNEL_ID = "rest_channel"
+
+        private const val REST_TONE_DURATION_MS = 600
+        private const val REST_TONE_VOLUME_PERCENT = 100
+        private const val REST_TONE_TYPE = ToneGenerator.TONE_PROP_BEEP
 
         private val HEADPHONE_AUDIO_DEVICE_TYPES = setOf(
             AudioDeviceInfo.TYPE_BLE_HEADSET,
@@ -152,8 +158,8 @@ class WorkoutNotificationManager(private val context: Context) {
 
     /**
      * Android mutes notification audio in vibrate and silent modes, even when media is playing through
-     * headphones. In that specific situation, play the same system notification tone as media so the
-     * rest alert reaches the headphones without making a vibrate-only phone audible in the room.
+     * headphones. In that specific situation, play a generated tone as media so the rest alert reaches
+     * the headphones without making a vibrate-only phone audible in the room.
      */
     private fun playRestToneThroughHeadphonesWhenNotificationsAreMuted() {
         if (
@@ -163,24 +169,25 @@ class WorkoutNotificationManager(private val context: Context) {
             return
         }
 
-        val toneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) ?: return
-        releaseRestTonePlayer(audioManager)
+        releaseRestToneGenerator(audioManager)
         if (!requestRestToneAudioFocus(audioManager)) return
 
         try {
-            restTonePlayer = MediaPlayer().apply {
-                setAudioAttributes(REST_TONE_AUDIO_ATTRIBUTES)
-                setDataSource(context, toneUri)
-                setOnPreparedListener { it.start() }
-                setOnCompletionListener { player -> releaseRestTonePlayer(player, audioManager) }
-                setOnErrorListener { player, _, _ ->
-                    releaseRestTonePlayer(player, audioManager)
-                    true
-                }
-                prepareAsync()
+            val generator = ToneGenerator(AudioManager.STREAM_MUSIC, REST_TONE_VOLUME_PERCENT)
+            restToneGenerator = generator
+            if (!generator.startTone(REST_TONE_TYPE, REST_TONE_DURATION_MS)) {
+                releaseRestToneGenerator(audioManager)
+                Log.e("WorkoutNotificationManager", "Failed to start generated rest tone")
+                return
             }
+
+            restToneHandler.postDelayed({
+                if (restToneGenerator === generator) {
+                    releaseRestToneGenerator(audioManager)
+                }
+            }, REST_TONE_DURATION_MS.toLong())
         } catch (e: Exception) {
-            releaseRestTonePlayer(audioManager)
+            releaseRestToneGenerator(audioManager)
             Log.e("WorkoutNotificationManager", "Failed to play rest tone through headphones", e)
         }
     }
@@ -206,17 +213,10 @@ class WorkoutNotificationManager(private val context: Context) {
         return granted
     }
 
-    private fun releaseRestTonePlayer(player: MediaPlayer, audioManager: AudioManager) {
-        player.release()
-        if (restTonePlayer === player) {
-            restTonePlayer = null
-            abandonRestToneAudioFocus(audioManager)
-        }
-    }
-
-    private fun releaseRestTonePlayer(audioManager: AudioManager) {
-        restTonePlayer?.release()
-        restTonePlayer = null
+    private fun releaseRestToneGenerator(audioManager: AudioManager) {
+        restToneGenerator?.stopTone()
+        restToneGenerator?.release()
+        restToneGenerator = null
         abandonRestToneAudioFocus(audioManager)
     }
 
