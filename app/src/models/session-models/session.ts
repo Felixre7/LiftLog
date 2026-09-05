@@ -41,14 +41,16 @@ export class Session {
   }
 
   static fromJSON(json: SessionJSON): Session {
+    const recordedExercises = json.recordedExercises.map(fromRecordedExerciseJSON);
     return new Session(
       json.id,
-      SessionBlueprint.fromJSON({
-        ...json.blueprint,
-        version: 6,
-        exercises: json.recordedExercises.map((x) => x.blueprint),
-      }),
-      json.recordedExercises.map(fromRecordedExerciseJSON),
+      // Blueprints are immutable values, also shared when creating a new session.
+      new SessionBlueprint(
+        json.blueprint.name,
+        recordedExercises.map((x) => x.blueprint),
+        json.blueprint.notes,
+      ),
+      recordedExercises,
       fromLocalDateJSON(json.date),
       json.bodyweight ? Weight.fromJSON(json.bodyweight) : undefined,
       undefined,

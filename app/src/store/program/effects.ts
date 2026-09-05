@@ -26,6 +26,7 @@ import { TaskAbortError } from '@reduxjs/toolkit';
 
 const builtInProgramsStorageKey = 'hasSavedDefaultPlans2';
 export function applyProgramEffects(addEffect: AddEffectFn) {
+  let upcomingRequest: { inputs: readonly unknown[] } | undefined;
   addEffect(
     initializeProgramStateSlice,
     async (
@@ -97,28 +98,42 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
   addEffect(
     fetchUpcomingSessions,
     async (_, { signal, cancelActiveListeners, dispatch, getState, extra: { sessionService, logger } }) => {
-      const start = performance.now();
-      cancelActiveListeners();
-      await yieldToEventLoop();
-
       const state = getState();
       const sessionBlueprints = selectActiveProgram(state).sessions;
-      const numberOfUpcomingSessions = sessionBlueprints.length;
-
-      if (signal.aborted) {
+      // Hydration and screen focus can request the same work while it is still running.
+      // Compare every state input used by SessionService; edits must supersede the old request.
+      const inputs = [
+        sessionBlueprints,
+        state.storedSessions.sessions,
+        state.storedSessions.latestExercises,
+        state.storedSessions.activeSessionId,
+        state.settings.useImperialUnits,
+      ];
+      if (upcomingRequest?.inputs.every((input, index) => input === inputs[index])) {
+        logger.info('fetchUpcomingSessions joined existing request');
         return;
       }
-      await yieldToEventLoop();
 
-      const sessions = await AsyncStream.from(
-        sessionService.getUpcomingSessions(sessionBlueprints, selectLatestExercises(state)),
-      )
-        .takeWhile(() => !signal.aborted)
-        .take(numberOfUpcomingSessions)
-        .toArray();
-      dispatch(setUpcomingSessions(RemoteData.success(sessions)));
-      const end = performance.now();
-      logger.info(`fetchUpcomingSessions effect took ${(end - start).toFixed(2)} ms`);
+      const request = { inputs };
+      upcomingRequest = request;
+      const start = performance.now();
+      cancelActiveListeners();
+      try {
+        await yieldToEventLoop();
+        if (signal.aborted) return;
+
+        const sessions = await AsyncStream.from(
+          sessionService.getUpcomingSessions(sessionBlueprints, selectLatestExercises(state)),
+        )
+          .takeWhile(() => !signal.aborted)
+          .take(sessionBlueprints.length)
+          .toArray();
+        if (signal.aborted || upcomingRequest !== request) return;
+        dispatch(setUpcomingSessions(RemoteData.success(sessions)));
+        logger.info(`fetchUpcomingSessions effect took ${(performance.now() - start).toFixed(2)} ms`);
+      } finally {
+        if (upcomingRequest === request) upcomingRequest = undefined;
+      }
     },
   );
 }

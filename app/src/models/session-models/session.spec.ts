@@ -977,6 +977,26 @@ describe('Session freeform and JSON', () => {
 
     expect(restored.equals(session)).toBe(true);
   });
+
+  it('restores mixed exercise blueprints once and keeps later edits independent', () => {
+    const session = makeSession([makeWeightedBlueprint(), makeCardioBlueprint(2)]);
+    const json = session.toJSON();
+    const restored = Session.fromJSON(json);
+
+    expect(restored.toJSON()).toEqual(json);
+    restored.recordedExercises.forEach((exercise, index) => {
+      expect(restored.blueprint.exercises[index]).toBe(exercise.blueprint);
+    });
+
+    const edited = restored.withExercise(
+      0,
+      (restored.recordedExercises[0] as RecordedWeightedExercise).with({
+        blueprint: makeWeightedBlueprint({ name: 'Edited squat' }),
+      }),
+    );
+    expect(edited.recordedExercises[0]!.blueprint.name).toBe('Edited squat');
+    expect(restored.toJSON()).toEqual(json);
+  });
 });
 
 describe('Session.runningCardioSet', () => {

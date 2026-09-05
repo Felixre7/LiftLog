@@ -97,7 +97,8 @@ function makeProgramState(savedPrograms: Record<string, ProgramBlueprint> = {}, 
       savedPrograms,
       upcomingSessions: RemoteData.notAsked(),
     },
-    storedSessions: { latestExercises: {} },
+    storedSessions: { latestExercises: {}, sessions: {} },
+    settings: { useImperialUnits: false },
   } as Partial<RootState>;
 }
 
@@ -321,6 +322,91 @@ describe('program effects', () => {
   });
 
   describe('fetchUpcomingSessions', () => {
+    it('coalesces concurrent requests without preventing a later refresh', async () => {
+      const gate = Promise.withResolvers<void>();
+      const sessionService = {
+        getUpcomingSessions: vi.fn().mockImplementation(async function* () {
+          await gate.promise;
+          yield { id: 's1' };
+        }),
+      };
+      const plan = makeProgram('Plan', [new SessionBlueprint('Day 1', [], '')]);
+      const testBed = createAddEffectTestBed({
+        initialState: makeProgramState({ plan }, 'plan'),
+        services: { sessionService },
+      });
+      applyProgramEffects(testBed.addEffect);
+
+      const first = testBed.dispatchHandled(fetchUpcomingSessions());
+      await vi.waitFor(() => expect(sessionService.getUpcomingSessions).toHaveBeenCalledTimes(1));
+      await testBed.dispatchHandled(fetchUpcomingSessions());
+      gate.resolve();
+      await first;
+
+      expect(sessionService.getUpcomingSessions).toHaveBeenCalledTimes(1);
+      expect(testBed.dispatchedActions.filter(setUpcomingSessions.match)).toHaveLength(1);
+      await testBed.dispatchHandled(fetchUpcomingSessions());
+      expect(sessionService.getUpcomingSessions).toHaveBeenCalledTimes(2);
+    });
+
+    it('supersedes a pending request after a plan change without publishing stale results', async () => {
+      const gate = Promise.withResolvers<void>();
+      const sessionService = {
+        getUpcomingSessions: vi
+          .fn()
+          .mockImplementationOnce(async function* () {
+            await gate.promise;
+            yield { id: 'old' };
+          })
+          .mockImplementation(function* () {
+            yield { id: 'new' };
+          }),
+      };
+      const oldPlan = makeProgram('Old', [new SessionBlueprint('Old day', [], '')]);
+      const newPlan = makeProgram('New', [new SessionBlueprint('New day', [], '')]);
+      const testBed = createAddEffectTestBed({
+        initialState: makeProgramState({ plan: oldPlan }, 'plan'),
+        services: { sessionService },
+      });
+      applyProgramEffects(testBed.addEffect);
+
+      const first = testBed.dispatchHandled(fetchUpcomingSessions());
+      await vi.waitFor(() => expect(sessionService.getUpcomingSessions).toHaveBeenCalledTimes(1));
+      testBed.setState(makeProgramState({ plan: newPlan }, 'plan'));
+      await testBed.dispatchHandled(fetchUpcomingSessions());
+      gate.resolve();
+      await first;
+
+      const results = testBed.dispatchedActions.filter(setUpcomingSessions.match);
+      expect(results).toHaveLength(1);
+      expect(results[0]!.payload.unwrapOr([])).toEqual([{ id: 'new' }]);
+    });
+
+    it('allows retrying the same inputs after generation fails', async () => {
+      const sessionService = {
+        getUpcomingSessions: vi
+          .fn()
+          .mockImplementationOnce(() => {
+            throw new Error('Generation failed');
+          })
+          .mockImplementation(function* () {
+            yield { id: 'retry' };
+          }),
+      };
+      const plan = makeProgram('Plan', [new SessionBlueprint('Day 1', [], '')]);
+      const testBed = createAddEffectTestBed({
+        initialState: makeProgramState({ plan }, 'plan'),
+        services: { sessionService },
+      });
+      applyProgramEffects(testBed.addEffect);
+
+      await testBed.dispatchHandled(fetchUpcomingSessions());
+      await testBed.dispatchHandled(fetchUpcomingSessions());
+
+      expect(sessionService.getUpcomingSessions).toHaveBeenCalledTimes(2);
+      expect(testBed.getDispatchedAction(setUpcomingSessions).payload.unwrapOr([])).toEqual([{ id: 'retry' }]);
+    });
+
     it('dispatches setUpcomingSessions with sessions from service', async () => {
       const prog = makeProgram('Plan', []);
       const state = makeProgramState({ 'id-1': prog }, 'id-1');
