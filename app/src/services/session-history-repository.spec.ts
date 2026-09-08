@@ -45,7 +45,7 @@ async function insert(values: Session[]) {
 beforeEach(async () => {
   db = drizzle(await openDatabaseAsync(':memory:'));
   await new DatabaseMigrationService(db, logger, { importOldData: async () => {} }).migrate();
-  repository = new SessionHistoryRepository(db, logger);
+  repository = new SessionHistoryRepository(db);
 });
 
 describe('indexed session history', () => {
@@ -70,12 +70,15 @@ describe('indexed session history', () => {
     const latest = workout('valid', 1, 110);
     const otherBlueprint = makeWeightedBlueprint({ name: 'Other' });
     await insert([workout('old', 0), latest, workout('abandoned', 2, 120, false), makeSession([otherBlueprint])]);
+    const loadSession = vi.spyOn(repository, 'getSession');
     const result = await repository.getLatestExercises([blueprint.progressionKey(), otherBlueprint.progressionKey()]);
     expect(result[blueprint.progressionKey()]?.toJSON()).toEqual(latest.recordedExercises[0]?.toJSON());
     expect(result[otherBlueprint.progressionKey()]).toBeUndefined();
-    expect(logger.info).toHaveBeenLastCalledWith(expect.stringContaining('2 keys, 1 sessions'));
-    await repository.getLatestExercises([blueprint.progressionKey(), otherBlueprint.progressionKey()]);
-    expect(logger.info).toHaveBeenLastCalledWith(expect.stringContaining('2 keys, 0 sessions'));
+    expect(loadSession).toHaveBeenCalledTimes(1);
+    loadSession.mockClear();
+    const cached = await repository.getLatestExercises([blueprint.progressionKey(), otherBlueprint.progressionKey()]);
+    expect(cached).toEqual(result);
+    expect(loadSession).not.toHaveBeenCalled();
   });
 
   it('recovers a projection invalidated by a raw payload edit, including a cached missing result', async () => {

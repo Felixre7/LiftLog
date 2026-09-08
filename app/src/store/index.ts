@@ -12,21 +12,18 @@ import { applySettingsEffects } from '@/store/settings/effects';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { applyFeedEffects } from '@/store/feed/effects';
 import { applyStatsEffects } from '@/store/stats/effects';
+import { warmAllTimeStats } from '@/store/stats';
 import { applyAiPlannerEffects } from '@/store/ai-planner/effects';
 import { applyBackendsEffects } from '@/store/backends/effects';
 import { clearAllListeners, Store } from '@reduxjs/toolkit';
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { useIsFocused } from 'expo-router';
 import { SQLiteDatabase } from 'expo-sqlite';
-import { attachStartupLogger, markStartup } from '@/utils/startup-diagnostics';
 
 export { RootState };
 
 export function resolveStore(db: ExpoSQLiteDatabase, expoDb: SQLiteDatabase) {
-  markStartup('store creation started');
   const { store, services, addEffect } = createStore(db, expoDb);
-  attachStartupLogger(services.logger);
-  markStartup('store and services created');
   store.dispatch(clearAllListeners());
   applyProgramEffects(addEffect);
   applyProgramImportExportEffects(addEffect);
@@ -39,23 +36,16 @@ export function resolveStore(db: ExpoSQLiteDatabase, expoDb: SQLiteDatabase) {
   applyAiPlannerEffects(addEffect);
   applyBackendsEffects(addEffect);
 
-  markStartup('effects registered');
   const slices = ['app', 'program', 'settings', 'storedSessions', 'aiPlanner'] as const;
   const unsubscribe = store.subscribe(() => {
     const state = store.getState();
-    for (const slice of slices) {
-      if (slice === 'storedSessions' ? state.storedSessions.isReady : state[slice].isHydrated) {
-        markStartup(`${slice} startup ready`);
-      }
-    }
     if (
       slices.every((slice) => (slice === 'storedSessions' ? state.storedSessions.isReady : state[slice].isHydrated))
     ) {
-      markStartup('all startup data ready');
       unsubscribe();
+      store.dispatch(warmAllTimeStats());
     }
   });
-  markStartup('app initialization dispatched');
   store.dispatch(initializeAppStateSlice());
   return { store, services };
 }

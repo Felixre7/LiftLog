@@ -6,7 +6,6 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync, SQLiteDatabase } from 'expo-sqlite';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
-import { markStartup } from '@/utils/startup-diagnostics';
 
 // Create context for services
 const ServicesContext = createContext<Services | null>(null);
@@ -14,11 +13,7 @@ const ServicesContext = createContext<Services | null>(null);
 let databasePromise: Promise<SQLiteDatabase> | undefined;
 function openDatabase() {
   if (!databasePromise) {
-    markStartup('database open started');
-    databasePromise = openDatabaseAsync('db.db').then((db) => {
-      markStartup('database open finished');
-      return db;
-    });
+    databasePromise = openDatabaseAsync('db.db');
   }
   return databasePromise;
 }
@@ -38,7 +33,6 @@ function ResolvedServicesProvider({ expoDb, children }: { expoDb: SQLiteDatabase
   useEffect(() => {
     if (services) {
       registerDateTranslations(services.tolgee);
-      markStartup('services provider committed');
     }
   }, [services]);
   return (

@@ -23,7 +23,7 @@ import { executeRemoteBackup } from '@/store/settings';
 import { LocalDate } from '@js-joda/core';
 import { T, useTranslate } from '@tolgee/react';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
-import { Profiler, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Card, Icon as PaperIcon, Text, Tooltip } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
@@ -32,10 +32,7 @@ import { WelcomeWizard } from '@/components/smart/welcome-wizard';
 import { WhatsNewBanner } from '@/components/smart/whats-new-banner';
 import { SharedSession } from '@/models/feed-models';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
-import { logStartupRender, markStartup } from '@/utils/startup-diagnostics';
 import { RemoteData } from '@/models/remote';
-
-markStartup('workout screen module evaluated');
 
 function ListUpcomingWorkouts({
   upcoming,
@@ -70,10 +67,7 @@ function ListUpcomingWorkouts({
   };
 
   return (
-    <View
-      style={{ flex: 1, gap: spacing[2], paddingTop: spacing[4] }}
-      onLayout={() => markStartup('upcoming workouts laid out')}
-    >
+    <View style={{ flex: 1, gap: spacing[2], paddingTop: spacing[4] }}>
       <WelcomeWizard />
       <WhatsNewBanner />
       {currentSession && (
@@ -268,13 +262,9 @@ export default function Index() {
   }, [pendingStart, progressionReady, upcomingSessions, currentBodyweight, start]);
 
   useFocusEffect(() => {
-    markStartup('workout focus started');
     dispatch(fetchUpcomingSessions());
-    markStartup('workout focus requested upcoming sessions');
     dispatch(publishUnpublishedSessions());
-    markStartup('workout focus dispatched feed publish');
     dispatch(executeRemoteBackup({}));
-    markStartup('workout focus dispatched backup');
   });
 
   const createFreeformSession = () => {
@@ -318,18 +308,17 @@ export default function Index() {
           headerBackVisible: false,
         }}
       />
-      <Profiler id="workout plan menu" onRender={logStartupRender}>
-        <PlanMenu />
-      </Profiler>
-      <Profiler id="workout list" onRender={logStartupRender}>
-        <Remote
-          value={displayedSessions}
-          retry={() => dispatch(fetchUpcomingSessions())}
-          success={(upcoming) => {
-            return <ListUpcomingWorkouts startSession={requestStart} upcoming={upcoming} preview={!progressionReady} />;
-          }}
-        />
-      </Profiler>
+
+      <PlanMenu />
+
+      <Remote
+        value={displayedSessions}
+        retry={() => dispatch(fetchUpcomingSessions())}
+        success={(upcoming) => {
+          return <ListUpcomingWorkouts startSession={requestStart} upcoming={upcoming} preview={!progressionReady} />;
+        }}
+      />
+
       {confirmationDialog}
     </FullHeightScrollView>
   );

@@ -12,16 +12,13 @@ import { initializeSettingsStateSlice } from '../settings';
 import { initializeProgramStateSlice } from '../program';
 import { setStringAsync } from 'expo-clipboard';
 import { initializeBackendsStateSlice } from '@/store/backends';
-import { markStartup } from '@/utils/startup-diagnostics';
 
 export function applyAppEffects(addEffect: AddEffectFn) {
   addEffect(
     initializeAppStateSlice,
     async (_, { cancelActiveListeners, dispatch, extra: { databaseMigrationService } }) => {
       cancelActiveListeners();
-      markStartup('database migrations started');
       await databaseMigrationService.migrate();
-      markStartup('database migrations finished');
       dispatch(initializeSettingsStateSlice());
       dispatch(initializeProgramStateSlice());
       dispatch(initializeBackendsStateSlice());

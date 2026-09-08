@@ -34,7 +34,6 @@ import { toRecord } from '@/utils/reduce';
 import { fromExerciseDescriptorJSON, toExerciseDescriptorJSON } from '@/models/exercise-models';
 import { loadBuiltInExercises } from '@/services/exercise-catalog';
 import { migrateLegacyCurrentSession } from '@/store/stored-sessions/legacy-current-session';
-import { markStartup } from '@/utils/startup-diagnostics';
 import { RemoteData } from '@/models/remote';
 
 // Built-ins the user deleted, so they stay hidden across restarts and locale switches.
@@ -55,16 +54,10 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       if (!getState().settings.isHydrated) {
         throw new Error('Settings must be hydrated before stored sessions');
       }
-      const hydrateStoredSessionsStart = performance.now();
-      markStartup('sessions loading started');
-      await logger.time('initializeStoredSessions', async () => {
-        const loadRowsStart = performance.now();
-        const rows = await db.select().from(sessionsSchema).where(eq(sessionsSchema.active, true));
-        logger.info(
-          `loadStoredSessionRows completed in ${(performance.now() - loadRowsStart).toFixed(2)}ms (${rows.length} sessions)`,
-        );
 
-        const deserializeSessionsStart = performance.now();
+      await logger.time('initializeStoredSessions', async () => {
+        const rows = await db.select().from(sessionsSchema).where(eq(sessionsSchema.active, true));
+
         const storedSessions = rows.reduce(
           toRecord(
             (x) => x.id,
@@ -72,13 +65,9 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
           ),
           {},
         );
-        logger.info(
-          `deserializeStoredSessions completed in ${(performance.now() - deserializeSessionsStart).toFixed(2)}ms`,
-        );
 
-        const setStoredSessionsStart = performance.now();
         dispatch(setStoredSessions(storedSessions));
-        logger.info(`setStoredSessions completed in ${(performance.now() - setStoredSessionsStart).toFixed(2)}ms`);
+
         // Only when there is one: dispatching `undefined` would clear every flag in the table, and a
         // kill between that write and the migration below would lose the workout in progress.
         const activeRowId = rows.find((x) => x.active)?.id;
@@ -87,11 +76,8 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         }
       });
 
-      await logger.time('migrateLegacyCurrentSession', () =>
-        migrateLegacyCurrentSession(dispatch, getState, keyValueStore, logger),
-      );
+      await migrateLegacyCurrentSession(dispatch, getState, keyValueStore, logger);
 
-      const loadSavedExercisesStart = performance.now();
       const savedExercises = (await db.select().from(exercisesSchema)).reduce(
         toRecord(
           (x) => x.id,
@@ -100,31 +86,16 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         {},
       );
       dispatch(setExercises(savedExercises));
-      logger.info(
-        `loadSavedExercises completed in ${(performance.now() - loadSavedExercisesStart).toFixed(2)}ms (${Object.keys(savedExercises).length} exercises)`,
-      );
 
-      const loadBuiltInExercisesStart = performance.now();
       const builtInExercises = await loadBuiltInExercises(getState().settings.preferredLanguage);
       dispatch(setBuiltInExercises(builtInExercises));
-      logger.info(
-        `loadBuiltInExercises completed in ${(performance.now() - loadBuiltInExercisesStart).toFixed(2)}ms (${Object.keys(builtInExercises).length} exercises)`,
-      );
 
-      const loadHiddenBuiltInIdsStart = performance.now();
       const hiddenBuiltInIds = JSON.parse(
         (await keyValueStore.getItem(hiddenBuiltInExerciseIdsStorageKey)) ?? '[]',
       ) as string[];
       dispatch(setHiddenBuiltInIds(hiddenBuiltInIds));
-      logger.info(
-        `loadHiddenBuiltInExerciseIds completed in ${(performance.now() - loadHiddenBuiltInIdsStart).toFixed(2)}ms`,
-      );
 
-      logger.info(
-        `hydrateStoredSessionsState completed in ${(performance.now() - hydrateStoredSessionsStart).toFixed(2)}ms`,
-      );
       dispatch(setIsReady(true));
-      markStartup('startup session data ready; completed history deferred');
       dispatch(fetchUpcomingSessions());
     },
   );
@@ -132,18 +103,15 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
   addEffect(loadStoredSessionHistory, async (_, { getState, dispatch, extra: { db, logger } }) => {
     const state = getState().storedSessions;
     if (state.isHydrated) {
-      logger.info(`loadCompletedSessionHistory reused cache (${Object.keys(state.sessions).length} sessions)`);
       return;
     }
     if (state.historyLoad.isLoading()) return;
     dispatch(setHistoryLoad(RemoteData.loading()));
-    const start = performance.now();
-    markStartup('completed history requested');
+
     try {
       // Let the existing loading indicator mount before starting the database work.
       await new Promise((resolve) => setTimeout(resolve, 20));
       const sessions: Record<string, Session> = {};
-      let count = 0;
       let afterId: string | undefined;
       while (true) {
         const rows = await db
@@ -156,7 +124,6 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
           if (!deletedBeforeHistoryLoaded.has(row.id))
             sessions[row.id] = Session.fromJSON(sessionMigrations.migrate(row.payload));
         }
-        count += rows.length;
         afterId = rows.at(-1)?.id ?? undefined;
         if (rows.length < 25) break;
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -167,10 +134,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       dispatch(setIsHydrated(true));
       deletedBeforeHistoryLoaded.clear();
       dispatch(setHistoryLoad(RemoteData.success(true)));
-      logger.info(
-        `loadCompletedSessionHistory completed in ${(performance.now() - start).toFixed(2)}ms (${count} sessions)`,
-      );
-      markStartup('completed history ready');
+
       dispatch(fetchUpcomingSessions());
     } catch (error) {
       logger.error('Failed to load session history', error);

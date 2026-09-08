@@ -10,7 +10,7 @@ import { sessionMigrations } from '@/models/storage/versions/migrations';
 import { getSessionReferenceTime } from '@/store/stored-sessions';
 import { and, asc, desc, eq, gte, gt, inArray, isNull, lt, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
-import { Logger } from '@/services/logger';
+import type { WorkCheckpoint } from '@/utils/cooperative-work';
 
 const batchSize = 25;
 const yieldToUI = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -108,10 +108,7 @@ export class SessionHistoryRepository {
     this.latestCache.clear();
   }
 
-  constructor(
-    private db: ExpoSQLiteDatabase,
-    private logger: Logger,
-  ) {}
+  constructor(private db: ExpoSQLiteDatabase) {}
 
   ensureIndexed(): Promise<void> {
     if (!this.indexing) {
@@ -123,11 +120,8 @@ export class SessionHistoryRepository {
   }
 
   private async backfill() {
-    const started = performance.now();
     let count = 0;
-    let slowestBatch = 0;
     while (true) {
-      const batchStarted = performance.now();
       // Each batch is atomic. A crash leaves the remaining rows marked unindexed for retry.
       const loaded = await withSessionTransaction(this.db, async (tx) => {
         const rows = await tx.select().from(sessions).where(isNull(sessions.searchVersion)).limit(batchSize);
@@ -137,15 +131,10 @@ export class SessionHistoryRepository {
         return rows.length;
       });
       count += loaded;
-      slowestBatch = Math.max(slowestBatch, performance.now() - batchStarted);
       if (loaded < batchSize) break;
       await yieldToUI();
     }
     if (count) this.latestCache.clear();
-    if (count)
-      this.logger.info(
-        `indexSessionHistory completed in ${(performance.now() - started).toFixed(2)}ms (${count} sessions, slowest batch ${slowestBatch.toFixed(2)}ms)`,
-      );
   }
 
   async getSessionIds(): Promise<string[]> {
@@ -171,7 +160,6 @@ export class SessionHistoryRepository {
   }
 
   async getLatestExercises(keys: ProgressionKey[]): Promise<Record<ProgressionKey, RecordedExercise | undefined>> {
-    const start = performance.now();
     const revision = this.revision;
     await this.ensureIndexed();
     const result: Record<ProgressionKey, RecordedExercise | undefined> = {};
@@ -192,9 +180,7 @@ export class SessionHistoryRepository {
       result[key] = match ? payloads.get(match.sessionId)?.recordedExercises[match.exerciseIndex] : undefined;
       if (revision === this.revision) this.latestCache.set(key, result[key]);
     }
-    this.logger.info(
-      `queryLatestProgression completed in ${(performance.now() - start).toFixed(2)}ms (${keys.length} keys, ${payloads.size} sessions)`,
-    );
+
     return result;
   }
 
@@ -299,22 +285,29 @@ export class SessionHistoryRepository {
     return rows.map((row) => Session.fromJSON(sessionMigrations.migrate(row.payload)));
   }
 
-  async getSessionsInRange(from: string, to: string): Promise<Session[]> {
+  async getSessionsInRange(from: string, to: string, checkpoint?: WorkCheckpoint): Promise<Session[]> {
     await this.ensureIndexed();
-    return this.readSessions(and(gte(sessions.date, from), lte(sessions.date, to)));
+    return this.readSessions(and(gte(sessions.date, from), lte(sessions.date, to)), checkpoint);
   }
 
-  private async readSessions(where: ReturnType<typeof and>): Promise<Session[]> {
+  private async readSessions(where: ReturnType<typeof and>, checkpoint?: WorkCheckpoint): Promise<Session[]> {
     const result: Session[] = [];
     let afterId: string | undefined;
     while (true) {
+      const pause = checkpoint?.();
+      if (pause) await pause;
       const rows = await this.db
         .select({ id: sessions.id, payload: sessions.payload })
         .from(sessions)
         .where(and(where, afterId ? gt(sessions.id, afterId) : undefined))
         .orderBy(asc(sessions.id))
         .limit(batchSize);
-      result.push(...rows.map((row) => Session.fromJSON(sessionMigrations.migrate(row.payload))));
+      for (const row of rows) {
+        const pause = checkpoint?.();
+        if (pause) await pause;
+        result.push(Session.fromJSON(sessionMigrations.migrate(row.payload)));
+      }
+
       if (rows.length < batchSize) return result;
       afterId = rows.at(-1)?.id ?? undefined;
       await yieldToUI();

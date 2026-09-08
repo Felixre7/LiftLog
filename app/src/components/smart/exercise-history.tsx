@@ -10,14 +10,13 @@ import { ExerciseHistoryCursor } from '@/services/session-history-repository';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { markStartup } from '@/utils/startup-diagnostics';
 
 export function getExerciseHistoryHref(blueprint: ExerciseBlueprint): Href {
   return `/exercise-history?name=${encodeURIComponent(blueprint.name)}&type=${blueprint.type}` as Href;
 }
 
 export function ExerciseHistory(props: { movementKey: MovementKey; exerciseName: string }) {
-  const { sessionHistoryRepository, logger } = useServices();
+  const { sessionHistoryRepository } = useServices();
   const [exercises, setExercises] = useState<RecordedExercise[]>([]);
   const [load, setLoad] = useState<RemoteData<boolean>>(RemoteData.loading());
   const cursor = useRef<ExerciseHistoryCursor | undefined>(undefined);
@@ -28,7 +27,7 @@ export function ExerciseHistory(props: { movementKey: MovementKey; exerciseName:
     if (busy.current || done.current) return;
     busy.current = true;
     setLoad(RemoteData.loading());
-    const start = performance.now();
+
     try {
       const page = await sessionHistoryRepository.getExerciseHistory(props.movementKey, cursor.current);
       if (!alive.current) return;
@@ -36,9 +35,6 @@ export function ExerciseHistory(props: { movementKey: MovementKey; exerciseName:
       done.current = !page.next;
       setExercises((existing) => [...existing, ...page.exercises]);
       setLoad(RemoteData.success(true));
-      logger.info(
-        `queryExerciseHistory completed in ${(performance.now() - start).toFixed(2)}ms (${page.exercises.length} performances)`,
-      );
     } catch (error) {
       if (alive.current) setLoad(RemoteData.error(String(error)));
     } finally {
@@ -57,11 +53,7 @@ export function ExerciseHistory(props: { movementKey: MovementKey; exerciseName:
   }, []);
 
   return (
-    <SafeAreaView
-      edges={{ left: 'additive', right: 'additive', top: 'off', bottom: 'off' }}
-      style={{ flex: 1 }}
-      onLayout={() => markStartup('exercise history laid out', `matches=${exercises.length}`)}
-    >
+    <SafeAreaView edges={{ left: 'additive', right: 'additive', top: 'off', bottom: 'off' }} style={{ flex: 1 }}>
       <SurfaceText
         font="text-xl"
         weight="bold"

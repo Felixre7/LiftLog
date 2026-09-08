@@ -35,9 +35,10 @@ export class Session {
     readonly restTimer: RestTimer | undefined,
   ) {}
   get duration(): Duration | undefined {
-    return this.lastExercise?.latestTime && this.firstExercise?.earliestTime
-      ? Duration.between(this.firstExercise.earliestTime, this.lastExercise.latestTime)
-      : undefined;
+    const latest = this.lastExercise?.latestTime;
+    if (!latest) return undefined;
+    const earliest = this.firstExercise?.earliestTime;
+    return earliest ? Duration.between(earliest, latest) : undefined;
   }
 
   static fromJSON(json: SessionJSON): Session {

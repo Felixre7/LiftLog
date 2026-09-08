@@ -56,7 +56,7 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
   return {
     logger,
     keyValueStore,
-    sessionHistoryRepository: new SessionHistoryRepository(db, logger),
+    sessionHistoryRepository: new SessionHistoryRepository(db),
     progressRepository,
     sessionService,
     notificationService,

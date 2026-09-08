@@ -33,6 +33,9 @@ work to find the docs relevant to your area, and update it whenever you add, rem
 
 ## Running it yourself
 
+- [Performance.md](./Performance.md) — background statistics preparation, cache invalidation,
+  cooperative scheduling, and indexed history loading.
+
 - [SelfHosting.md](./SelfHosting.md) — quickstart for running your own backend: a copy-paste Docker
   Compose file, how to point the app at it, and the environment variables that switch on the feed,
   remote backup, and AI planner. Pairs with the [backend README](../backend/README.md).

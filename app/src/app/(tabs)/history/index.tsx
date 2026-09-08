@@ -70,7 +70,7 @@ function MonthHistory() {
     if (!isFocused) return;
     let cancelled = false;
     if (loadedMonth.current !== currentYearMonth.toString()) setLoad(RemoteData.loading());
-    const start = performance.now();
+
     void (async () => {
       try {
         const sessions = await sessionHistoryRepository.getSessionsByMonth(currentYearMonth.toString());
@@ -80,9 +80,6 @@ function MonthHistory() {
         dispatch(setActivitySummaries(summaries));
         loadedMonth.current = currentYearMonth.toString();
         setLoad(RemoteData.success(true));
-        logger.info(
-          `queryHistoryMonth completed in ${(performance.now() - start).toFixed(2)}ms (${sessions.length} sessions, ${summaries.length} summaries)`,
-        );
       } catch (error) {
         if (!cancelled) setLoad(RemoteData.error(String(error)));
       }

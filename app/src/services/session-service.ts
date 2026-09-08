@@ -20,7 +20,6 @@ import { selectActiveSession } from '@/store/stored-sessions';
 import { uuid } from '@/utils/uuid';
 import { LocalDate } from '@js-joda/core';
 import { match } from 'ts-pattern';
-import { markStartup } from '@/utils/startup-diagnostics';
 
 export class SessionService {
   constructor(
@@ -40,19 +39,15 @@ export class SessionService {
     if (!firstSessionBlueprint) {
       return;
     }
-    markStartup('upcoming service first yield started');
     await yieldToEventLoop();
-    markStartup('upcoming service first yield finished');
 
     let latestSession =
       currentSession ??
       (latestStoredSession === undefined
         ? this.progressRepository.getOrderedSessions().firstOrDefault((x) => !x.isFreeform)
         : latestStoredSession);
-    markStartup('upcoming latest session found');
 
     await yieldToEventLoop();
-    markStartup('upcoming service second yield finished');
     // Track the plan position by index so progression walks the plan in order.
     // Matching only by name would stall on duplicate-named workouts, always
     // resolving to the first one and never advancing past it.

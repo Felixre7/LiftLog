@@ -23,7 +23,6 @@ import { LocalDate } from '@js-joda/core';
 import { toRecord } from '@/utils/reduce';
 import { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { TaskAbortError } from '@reduxjs/toolkit';
-import { markStartup } from '@/utils/startup-diagnostics';
 
 const builtInProgramsStorageKey = 'hasSavedDefaultPlans2';
 export function applyProgramEffects(addEffect: AddEffectFn) {
@@ -34,7 +33,6 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
       _,
       { getState, cancelActiveListeners, dispatch, extra: { keyValueStore, logger, db }, throwIfCancelled },
     ) => {
-      const start = performance.now();
       cancelActiveListeners();
 
       let activePlanId: string | undefined;
@@ -71,8 +69,6 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
 
       dispatch(setIsHydrated(true));
       dispatch(fetchUpcomingSessions());
-      const end = performance.now();
-      logger.info(`initializeProgramStateSlice effect took ${(end - start).toFixed(2)} ms`);
     },
   );
 
@@ -84,15 +80,13 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
       { stateBeforeReduce, stateAfterReduce, extra: { db, logger }, throwIfCancelled, cancelActiveListeners },
     ) => {
       cancelActiveListeners();
-      const start = performance.now();
+
       const shouldPersist =
         stateAfterReduce.program.isHydrated &&
         (stateAfterReduce.program.activePlanId !== stateBeforeReduce.program.activePlanId ||
           stateAfterReduce.program.savedPrograms !== stateBeforeReduce.program.savedPrograms);
       if (shouldPersist) {
         await persistPrograms(stateAfterReduce, db, logger, throwIfCancelled);
-        const end = performance.now();
-        logger.info(`Persist program state effect took ${(end - start).toFixed(2)} ms`);
       }
     },
   );
@@ -124,18 +118,15 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
         state.settings.useImperialUnits,
       ];
       if (upcomingRequest?.inputs.every((input, index) => input === inputs[index])) {
-        logger.info('fetchUpcomingSessions joined existing request');
         return;
       }
 
       const request = { inputs };
       upcomingRequest = request;
-      const start = performance.now();
+
       cancelActiveListeners();
       try {
-        markStartup('upcoming effect yield started');
         await yieldToEventLoop();
-        markStartup('upcoming effect yield finished');
         if (signal.aborted) return;
 
         const latestExercises = state.storedSessions.isHydrated
@@ -157,14 +148,12 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
             }
           }
         }
-        markStartup('upcoming latest exercises selected');
         const sessions = await AsyncStream.from(
           sessionService.getUpcomingSessions(sessionBlueprints, latestExercises, latestSession),
         )
           .takeWhile(() => !signal.aborted)
           .take(sessionBlueprints.length)
           .toArray();
-        markStartup('upcoming generation finished');
         if (signal.aborted || upcomingRequest !== request) return;
         const current = getState();
         if (
@@ -176,8 +165,6 @@ export function applyProgramEffects(addEffect: AddEffectFn) {
           return;
         }
         dispatch(setUpcomingSessions(RemoteData.success(sessions)));
-        markStartup('first upcoming workouts published');
-        logger.info(`fetchUpcomingSessions effect took ${(performance.now() - start).toFixed(2)} ms`);
       } catch (error) {
         if (!signal.aborted && upcomingRequest === request) {
           logger.error('Failed to load upcoming workouts', error);

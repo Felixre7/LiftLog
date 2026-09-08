@@ -16,6 +16,8 @@ interface StoredSessionState {
   // Startup needs only the active workout and exercise catalogs. isHydrated means all history.
   isReady: boolean;
   dataRevision: number;
+  // Statistics exclude the active workout, so logging a set must not restart their warm-up.
+  historyRevision: number;
   isHydrated: boolean;
   historyLoad: RemoteData<boolean>;
   activitySummaries: SessionActivitySummary[] | undefined;
@@ -36,6 +38,7 @@ interface StoredSessionState {
 const initialState: StoredSessionState = {
   isReady: false,
   dataRevision: 0,
+  historyRevision: 0,
   isHydrated: false,
   historyLoad: RemoteData.notAsked(),
   activitySummaries: undefined,
@@ -97,6 +100,8 @@ const storedSessionsSlice = createSlice({
       state.isHydrated = action.payload;
     },
     setStoredSessions(state, action: PayloadAction<Record<string, Session>>) {
+      state.dataRevision++;
+      state.historyRevision++;
       state.sessions = action.payload;
       state.latestExercises = {};
       state.earliestSession = undefined;
@@ -137,10 +142,12 @@ const storedSessionsSlice = createSlice({
     setActiveSessionId(state, action: PayloadAction<string | undefined>) {
       state.activeSessionId = action.payload;
       state.dataRevision++;
+      state.historyRevision++;
     },
 
     deleteStoredSession(state, action: PayloadAction<string>) {
       state.dataRevision++;
+      state.historyRevision++;
       const deletedSession = state.sessions[action.payload];
       delete state.sessions[action.payload];
       state.activitySummaries = state.activitySummaries?.filter((session) => session.id !== action.payload);
@@ -234,6 +241,7 @@ const storedSessionsSlice = createSlice({
 
 function updateDerivatives(state: WritableDraft<StoredSessionState>, session: Session) {
   state.dataRevision++;
+  if (session.id !== state.activeSessionId) state.historyRevision++;
   if (!state.earliestSession || state.earliestSession.date.isAfter(session.date)) {
     state.earliestSession = session;
   }

@@ -5,11 +5,10 @@ import { useAppSelector } from '@/store';
 import { copyLogs } from '@/store/app';
 import { T } from '@tolgee/react';
 import * as Application from 'expo-application';
-import { Profiler, ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Text, View } from 'react-native';
 import { openUrl } from '@/utils/open-url';
 import { useDispatch } from 'react-redux';
-import { logNativeStartupTiming, logStartupRender, markStartup } from '@/utils/startup-diagnostics';
 
 // How long to wait before assuming startup has stalled and offering an escape hatch.
 const STUCK_TIMEOUT_MS = 7_000;
@@ -26,15 +25,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const { colors } = useAppTheme();
   const isWaiting = !!waitingOn;
   const anim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (waitingOn) {
-      markStartup(`loading screen: ${waitingOn}`);
-    } else {
-      markStartup('hydrated UI committed');
-      logNativeStartupTiming();
-    }
-  }, [waitingOn]);
 
   if (isWaiting) {
     return (
@@ -55,11 +45,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  return (
-    <Profiler id="hydrated navigation" onRender={logStartupRender}>
-      {children}
-    </Profiler>
-  );
+  return children;
 }
 
 function StuckHelp() {
