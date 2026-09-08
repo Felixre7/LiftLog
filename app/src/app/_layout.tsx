@@ -12,8 +12,12 @@ import StackWithHeader from '@/components/layout/stack-with-header';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { requireOptionalNativeModule } from 'expo';
+import { useEffect } from 'react';
+import { markStartup } from '@/utils/startup-diagnostics';
 
+markStartup('root layout module evaluated');
 install();
+markStartup('crypto installed');
 
 if (__DEV__) {
   // oxlint-disable-next-line typescript/no-unsafe-assignment
@@ -29,6 +33,9 @@ if (Platform.OS !== 'web') {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    markStartup('root layout committed');
+  }, []);
   return (
     <GestureHandlerRootView>
       <KeyboardProvider>

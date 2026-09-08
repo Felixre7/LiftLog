@@ -39,7 +39,11 @@ export default function StatsPage() {
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingRight: spacing[2] }}>
         <TimePeriodSelector timePeriod={timePeriod} setTimePeriod={(value) => dispatch(setOverallViewTime(value))} />
       </View>
-      <Remote value={stats} success={(stats) => <LoadedStats stats={stats} />} />
+      <Remote
+        value={stats}
+        retry={() => dispatch(fetchOverallStats())}
+        success={(stats) => <LoadedStats stats={stats} />}
+      />
     </FullHeightScrollView>
   );
 }

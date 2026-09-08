@@ -64,6 +64,20 @@
       "when": 1787871156116,
       "tag": "0008_far_catseye",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1788739945660,
+      "tag": "0009_indexed_session_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1788739946246,
+      "tag": "0010_session_search_invalidation",
+      "breakpoints": true
     }
   ]
 }

@@ -97,7 +97,7 @@ function makeProgramState(savedPrograms: Record<string, ProgramBlueprint> = {}, 
       savedPrograms,
       upcomingSessions: RemoteData.notAsked(),
     },
-    storedSessions: { latestExercises: {}, sessions: {} },
+    storedSessions: { latestExercises: {}, sessions: {}, isHydrated: true },
     settings: { useImperialUnits: false },
   } as Partial<RootState>;
 }
@@ -404,7 +404,9 @@ describe('program effects', () => {
       await testBed.dispatchHandled(fetchUpcomingSessions());
 
       expect(sessionService.getUpcomingSessions).toHaveBeenCalledTimes(2);
-      expect(testBed.getDispatchedAction(setUpcomingSessions).payload.unwrapOr([])).toEqual([{ id: 'retry' }]);
+      expect(testBed.dispatchedActions.filter(setUpcomingSessions.match).at(-1)?.payload.unwrapOr([])).toEqual([
+        { id: 'retry' },
+      ]);
     });
 
     it('dispatches setUpcomingSessions with sessions from service', async () => {

@@ -29,6 +29,7 @@ import { detectLanguageFromDateLocale } from '@/utils/language-detector';
 import { supportedLanguages } from '@/services/tolgee';
 import { initializeStoredSessionsStateSlice } from '@/store/stored-sessions';
 import { builtInBackendId } from '@/models/backend';
+import { markStartup } from '@/utils/startup-diagnostics';
 
 // Read every generically-hydrated key, then dispatch its setter.
 async function hydrateGenericPreferences(
@@ -53,7 +54,9 @@ export function applySettingsEffects(addEffect: AddEffectFn) {
       const start = performance.now();
       cancelActiveListeners();
 
+      markStartup('generic preferences started');
       await hydrateGenericPreferences(preferenceService, dispatch);
+      markStartup('generic preferences finished');
 
       // Bespoke hydration: sync read, composite keys, and composed values.
       dispatch(setPreferredLanguage(preferenceService.getPreferredLanguage()));
@@ -77,6 +80,7 @@ export function applySettingsEffects(addEffect: AddEffectFn) {
 
       const proToken = await preferenceService.getProToken();
       dispatch(setProToken(proToken));
+      markStartup('bespoke preferences finished');
 
       if (!__DEV__) {
         if (Platform.OS === 'ios') {
@@ -90,6 +94,7 @@ export function applySettingsEffects(addEffect: AddEffectFn) {
         }
       }
       // migrate pro token to a revenuecat
+      markStartup('purchases configured or skipped');
       if (proToken && !proToken.startsWith('$RCAnonymousID')) {
         try {
           const customerInfo = await Purchases.getCustomerInfo();

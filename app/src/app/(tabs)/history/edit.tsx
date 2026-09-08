@@ -1,3 +1,4 @@
+import { StoredSessionGate } from '@/components/smart/stored-session-gate';
 import SessionComponent from '@/components/smart/session-component';
 import SessionMoreMenuComponent from '@/components/smart/session-more-menu-component';
 import { spacing } from '@/hooks/useAppTheme';
@@ -15,6 +16,15 @@ import { useTranslate } from '@tolgee/react';
 import { useRef } from 'react';
 
 export default function HistoryEditPage() {
+  const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
+  return (
+    <StoredSessionGate sessionId={sessionId}>
+      <HistoryEditContent />
+    </StoredSessionGate>
+  );
+}
+
+function HistoryEditContent() {
   const dispatch = useDispatch();
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const session = useAppSelectorWithArg(selectSession, sessionId);

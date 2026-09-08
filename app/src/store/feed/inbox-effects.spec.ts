@@ -58,6 +58,9 @@ function makeTestBed(options?: {
   sessions?: Record<string, Session>;
 }) {
   const services = {
+    sessionHistoryRepository: {
+      getSessionIds: vi.fn().mockResolvedValue(Object.keys(options?.sessions ?? { [OWN_SESSION_ID]: ownSession() })),
+    },
     feedApiService: {
       getInboxMessagesAsync: vi.fn().mockResolvedValue(ApiResult.success({ inboxMessages: [{}] })),
     },

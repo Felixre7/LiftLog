@@ -1,8 +1,10 @@
+import { SessionActivitySummary } from '@/models/session-summary';
 import { Session } from '@/models/session-models';
 import { ActivityLevel, MAX_ACTIVITY_LEVEL, VolumeScale } from '@/store/activity/activity-types';
 
 /** Kilograms moved. Cardio contributes nothing, so a cardio-only session scores zero - see `levelFor`. */
-export function sessionVolume(session: Session): number {
+export function sessionVolume(session: Session | SessionActivitySummary): number {
+  if ('volume' in session) return session.volume;
   let total = 0;
   for (const exercise of session.recordedExercises) {
     if (exercise.type !== 'RecordedWeightedExercise') {

@@ -6,6 +6,7 @@ import { useStartWorkout } from '@/hooks/useStartWorkout';
 import { T, useTranslate } from '@tolgee/react';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { markStartup } from '@/utils/startup-diagnostics';
 
 /**
  * Opens a session as the workout in progress, asking first when that would discard a different
@@ -22,6 +23,7 @@ export function useStartWorkoutWithConfirmation({ onStarted }: { onStarted?: (se
   const [pendingReplace, setPendingReplace] = useState<Session | undefined>();
 
   const open = (session: Session) => {
+    markStartup('workout opened');
     if (activeSession?.id !== session.id) {
       startWorkout(session);
     }

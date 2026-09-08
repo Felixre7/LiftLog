@@ -1,8 +1,12 @@
+import { updateSessionSearch, withSessionTransaction } from '@/services/session-history-repository';
 import { AddEffectFn } from '@/store/store';
 import {
   deleteExercise,
   deleteStoredSession,
   initializeStoredSessionsStateSlice,
+  loadStoredSessionHistory,
+  setHistoryLoad,
+  setIsReady,
   putStoredSession,
   restoreExercise,
   selectSession,
@@ -25,15 +29,24 @@ import { setPreferredLanguage } from '@/store/settings';
 import { Session } from '@/models/session-models';
 import { sessionMigrations } from '@/models/storage/versions/migrations';
 import { exercisesSchema, sessionsSchema } from '@/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { asc, eq, gt, sql } from 'drizzle-orm';
 import { toRecord } from '@/utils/reduce';
 import { fromExerciseDescriptorJSON, toExerciseDescriptorJSON } from '@/models/exercise-models';
 import { loadBuiltInExercises } from '@/services/exercise-catalog';
 import { migrateLegacyCurrentSession } from '@/store/stored-sessions/legacy-current-session';
+import { markStartup } from '@/utils/startup-diagnostics';
+import { RemoteData } from '@/models/remote';
 
 // Built-ins the user deleted, so they stay hidden across restarts and locale switches.
 const hiddenBuiltInExerciseIdsStorageKey = 'HiddenBuiltInExerciseIdList';
 export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
+  const deletedBeforeHistoryLoaded = new Set<string>();
+  addEffect(
+    [putStoredSession, updateStoredSession, upsertStoredSessions, deleteStoredSession, setActiveSessionId],
+    async (_, { extra: { sessionHistoryRepository } }) => {
+      sessionHistoryRepository?.invalidate();
+    },
+  );
   // Dispatched AFTER settings, so we can safely access settings
   addEffect(
     initializeStoredSessionsStateSlice,
@@ -43,9 +56,10 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         throw new Error('Settings must be hydrated before stored sessions');
       }
       const hydrateStoredSessionsStart = performance.now();
+      markStartup('sessions loading started');
       await logger.time('initializeStoredSessions', async () => {
         const loadRowsStart = performance.now();
-        const rows = await db.select().from(sessionsSchema);
+        const rows = await db.select().from(sessionsSchema).where(eq(sessionsSchema.active, true));
         logger.info(
           `loadStoredSessionRows completed in ${(performance.now() - loadRowsStart).toFixed(2)}ms (${rows.length} sessions)`,
         );
@@ -73,7 +87,9 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         }
       });
 
-      await migrateLegacyCurrentSession(dispatch, getState, keyValueStore, logger);
+      await logger.time('migrateLegacyCurrentSession', () =>
+        migrateLegacyCurrentSession(dispatch, getState, keyValueStore, logger),
+      );
 
       const loadSavedExercisesStart = performance.now();
       const savedExercises = (await db.select().from(exercisesSchema)).reduce(
@@ -107,14 +123,64 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       logger.info(
         `hydrateStoredSessionsState completed in ${(performance.now() - hydrateStoredSessionsStart).toFixed(2)}ms`,
       );
-      dispatch(setIsHydrated(true));
+      dispatch(setIsReady(true));
+      markStartup('startup session data ready; completed history deferred');
       dispatch(fetchUpcomingSessions());
     },
   );
 
+  addEffect(loadStoredSessionHistory, async (_, { getState, dispatch, extra: { db, logger } }) => {
+    const state = getState().storedSessions;
+    if (state.isHydrated) {
+      logger.info(`loadCompletedSessionHistory reused cache (${Object.keys(state.sessions).length} sessions)`);
+      return;
+    }
+    if (state.historyLoad.isLoading()) return;
+    dispatch(setHistoryLoad(RemoteData.loading()));
+    const start = performance.now();
+    markStartup('completed history requested');
+    try {
+      // Let the existing loading indicator mount before starting the database work.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      const sessions: Record<string, Session> = {};
+      let count = 0;
+      let afterId: string | undefined;
+      while (true) {
+        const rows = await db
+          .select()
+          .from(sessionsSchema)
+          .where(afterId ? gt(sessionsSchema.id, afterId) : undefined)
+          .orderBy(asc(sessionsSchema.id))
+          .limit(25);
+        for (const row of rows) {
+          if (!deletedBeforeHistoryLoaded.has(row.id))
+            sessions[row.id] = Session.fromJSON(sessionMigrations.migrate(row.payload));
+        }
+        count += rows.length;
+        afterId = rows.at(-1)?.id ?? undefined;
+        if (rows.length < 25) break;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      // The live workout may have changed while SQLite was reading. In-memory edits win.
+      for (const id of deletedBeforeHistoryLoaded) delete sessions[id];
+      dispatch(setStoredSessions({ ...sessions, ...getState().storedSessions.sessions }));
+      dispatch(setIsHydrated(true));
+      deletedBeforeHistoryLoaded.clear();
+      dispatch(setHistoryLoad(RemoteData.success(true)));
+      logger.info(
+        `loadCompletedSessionHistory completed in ${(performance.now() - start).toFixed(2)}ms (${count} sessions)`,
+      );
+      markStartup('completed history ready');
+      dispatch(fetchUpcomingSessions());
+    } catch (error) {
+      logger.error('Failed to load session history', error);
+      dispatch(setHistoryLoad(RemoteData.error(error instanceof Error ? error.message : String(error))));
+    }
+  });
+
   // Re-resolve the built-in catalog when the language changes (startup load is handled above).
   addEffect(setPreferredLanguage, async (action, { getState, dispatch }) => {
-    if (!getState().storedSessions.isHydrated) {
+    if (!getState().storedSessions.isReady) {
       return;
     }
     dispatch(setBuiltInExercises(await loadBuiltInExercises(action.payload)));
@@ -146,9 +212,13 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
     }
   });
 
-  addEffect(deleteStoredSession, async (action, { extra: { logger, db } }) => {
+  addEffect(deleteStoredSession, async (action, { getState, extra: { logger, db } }) => {
+    // A read already in flight must not restore a workout the user just discarded.
+    if (!getState().storedSessions.isHydrated) deletedBeforeHistoryLoaded.add(action.payload);
     await logger.time('deleteStoredSession', async () => {
-      await db.delete(sessionsSchema).where(eq(sessionsSchema.id, action.payload));
+      await withSessionTransaction(db, async (tx) => {
+        await tx.delete(sessionsSchema).where(eq(sessionsSchema.id, action.payload));
+      });
     });
   });
   addEffect(deleteStoredSession, async (action, { stateAfterReduce, extra: { healthExportService, logger } }) => {
@@ -177,19 +247,22 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
       return;
     }
     await logger.time('persistStoredSession', async () => {
-      await db
-        .insert(sessionsSchema)
-        .values({
-          id: session.id,
-          active: false,
-          payload: session.toJSON(),
-        })
-        .onConflictDoUpdate({
-          target: sessionsSchema.id,
-          set: {
-            payload: sql.raw(`excluded.${sessionsSchema.payload.name}`),
-          },
-        });
+      await withSessionTransaction(db, async (tx) => {
+        await tx
+          .insert(sessionsSchema)
+          .values({
+            id: session.id,
+            active: false,
+            payload: session.toJSON(),
+          })
+          .onConflictDoUpdate({
+            target: sessionsSchema.id,
+            set: {
+              payload: sql.raw(`excluded.${sessionsSchema.payload.name}`),
+            },
+          });
+        await updateSessionSearch(tx, session);
+      });
     });
   });
 
@@ -197,7 +270,7 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
   // been written by the effect above first - the two are dispatched together and race.
   addEffect(setActiveSessionId, async (action, { getState, extra: { db, logger } }) => {
     await logger.time('setActiveSessionId', async () => {
-      await db.transaction(async (tx) => {
+      await withSessionTransaction(db, async (tx) => {
         await tx.update(sessionsSchema).set({ active: false }).where(eq(sessionsSchema.active, true));
         const sessionId = action.payload;
         if (sessionId === undefined) {
@@ -211,6 +284,9 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
           .insert(sessionsSchema)
           .values({ id: session.id, active: true, payload: session.toJSON() })
           .onConflictDoUpdate({ target: sessionsSchema.id, set: { active: true } });
+        // On conflict the payload belongs to the content writer, so project that exact row.
+        const [row] = await tx.select().from(sessionsSchema).where(eq(sessionsSchema.id, session.id));
+        if (row) await updateSessionSearch(tx, Session.fromJSON(sessionMigrations.migrate(row.payload)));
       });
     });
   });
@@ -225,15 +301,21 @@ export function applyStoredSessionsEffects(addEffect: AddEffectFn) {
         active: false,
         payload: x.toJSON(),
       }));
-      await db
-        .insert(sessionsSchema)
-        .values(toUpsert)
-        .onConflictDoUpdate({
-          target: sessionsSchema.id,
-          set: {
-            payload: sql.raw(`excluded.${sessionsSchema.payload.name}`),
-          },
-        });
+      if (!toUpsert.length) return;
+      await withSessionTransaction(db, async (tx) => {
+        for (let offset = 0; offset < toUpsert.length; offset += 100) {
+          await tx
+            .insert(sessionsSchema)
+            .values(toUpsert.slice(offset, offset + 100))
+            .onConflictDoUpdate({
+              target: sessionsSchema.id,
+              set: {
+                payload: sql.raw(`excluded.${sessionsSchema.payload.name}`),
+              },
+            });
+        }
+        for (const session of action.payload) await updateSessionSearch(tx, session);
+      });
     });
   });
 

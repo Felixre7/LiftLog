@@ -1,3 +1,7 @@
+import { useServices } from '@/components/smart/services-provider';
+import { Remote } from '@/components/presentation/foundation/remote';
+import { RemoteData } from '@/models/remote';
+import { mergeLoadedSessions, setActivitySummaries } from '@/store/stored-sessions';
 import CardActions from '@/components/presentation/foundation/card-actions';
 import ConfirmationDialog from '@/components/presentation/foundation/confirmation-dialog';
 import EmptyInfo from '@/components/presentation/foundation/empty-info';
@@ -28,8 +32,8 @@ import {
 import { uuid } from '@/utils/uuid';
 import { LocalDate, YearMonth } from '@js-joda/core';
 import { T, useTranslate } from '@tolgee/react';
-import { Stack, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Stack, useIsFocused, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { LegendList } from '@legendapp/list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,12 +43,73 @@ import { useDispatch } from 'react-redux';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { useStartWorkout } from '@/hooks/useStartWorkout';
 import { SharedSession } from '@/models/feed-models';
+import { Loader } from '@/components/presentation/foundation/loader';
 
 export default function History() {
+  const isFocused = useIsFocused();
+  const [hasVisited, setHasVisited] = useState(isFocused);
+  useEffect(() => {
+    if (isFocused) setHasVisited(true);
+  }, [isFocused]);
+
+  // Native tabs mount offscreen routes too. Keep the calendar and history selectors dormant until
+  // the first visit, then retain their state when switching tabs or opening a session for editing.
+  return hasVisited ? <MonthHistory /> : <Loader />;
+}
+
+function MonthHistory() {
+  const [currentYearMonth, setCurrentYearMonth] = useState(YearMonth.now());
+  const [load, setLoad] = useState<RemoteData<boolean>>(RemoteData.loading());
+  const [retry, setRetry] = useState(0);
+  const loadedMonth = useRef<string | undefined>(undefined);
+  const { sessionHistoryRepository, logger } = useServices();
+  const dispatch = useDispatch();
+  const revision = useAppSelector((state) => state.storedSessions.dataRevision);
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (!isFocused) return;
+    let cancelled = false;
+    if (loadedMonth.current !== currentYearMonth.toString()) setLoad(RemoteData.loading());
+    const start = performance.now();
+    void (async () => {
+      try {
+        const sessions = await sessionHistoryRepository.getSessionsByMonth(currentYearMonth.toString());
+        const summaries = await sessionHistoryRepository.getActivitySummaries();
+        if (cancelled) return;
+        dispatch(mergeLoadedSessions(sessions));
+        dispatch(setActivitySummaries(summaries));
+        loadedMonth.current = currentYearMonth.toString();
+        setLoad(RemoteData.success(true));
+        logger.info(
+          `queryHistoryMonth completed in ${(performance.now() - start).toFixed(2)}ms (${sessions.length} sessions, ${summaries.length} summaries)`,
+        );
+      } catch (error) {
+        if (!cancelled) setLoad(RemoteData.error(String(error)));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentYearMonth, revision, retry, isFocused, dispatch, sessionHistoryRepository, logger]);
+  return (
+    <Remote
+      value={load}
+      retry={() => setRetry((value) => value + 1)}
+      success={() => <HistoryContent currentYearMonth={currentYearMonth} onMonthChange={setCurrentYearMonth} />}
+    />
+  );
+}
+
+function HistoryContent({
+  currentYearMonth,
+  onMonthChange,
+}: {
+  currentYearMonth: YearMonth;
+  onMonthChange: (month: YearMonth) => void;
+}) {
   const { t } = useTranslate();
   const dispatch = useDispatch();
   const formatDate = useFormatDate();
-  const [currentYearMonth, setCurrentYearMonth] = useState(YearMonth.now());
   const { handleScroll } = useScroll();
   const insets = useSafeAreaInsets();
   const latesBodyweight = useAppSelector((x) =>
@@ -132,7 +197,7 @@ export default function History() {
               currentYearMonth={currentYearMonth}
               selectedDate={selectedDate}
               onMonthChange={(yearMonth) => {
-                setCurrentYearMonth(yearMonth);
+                onMonthChange(yearMonth);
                 setSelectedDate(undefined);
               }}
               onDateSelect={setSelectedDate}

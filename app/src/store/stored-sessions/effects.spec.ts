@@ -4,10 +4,14 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync } from 'expo-sqlite';
 import { eq } from 'drizzle-orm';
+import { combineReducers } from '@reduxjs/toolkit';
 import { DatabaseMigrationService } from '@/services/database-migration-service';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import {
   initializeStoredSessionsStateSlice,
+  loadStoredSessionHistory,
+  storedSessionsReducer,
+  deleteStoredSession,
   putStoredSession,
   sessionFinished,
   setActiveSessionId,
@@ -79,6 +83,112 @@ describe('stored-sessions effects', () => {
     applyStoredSessionsEffects(testBed.addEffect);
     return testBed;
   }
+
+  describe('deferred history', () => {
+    function historyBed() {
+      const testBed = createAddEffectTestBed({
+        reducer: combineReducers({
+          storedSessions: storedSessionsReducer,
+          settings: (state = { isHydrated: true, preferredLanguage: 'en' }) => state,
+        }),
+        initialState: { settings: { isHydrated: true, preferredLanguage: 'en' } },
+        services: { db, logger, keyValueStore: makeKvStore(), healthExportService: { canExport: () => false } },
+      });
+      applyStoredSessionsEffects(testBed.addEffect);
+      return testBed;
+    }
+
+    it('boots with only the active workout, leaving completed rows on disk', async () => {
+      const active = Session.freeformSession(LocalDate.of(2026, 4, 11), undefined);
+      const completed = Session.freeformSession(LocalDate.of(2026, 4, 10), undefined);
+      await db.insert(sessionsSchema).values([
+        { id: active.id, active: true, payload: active.toJSON() },
+        { id: completed.id, active: false, payload: completed.toJSON() },
+      ]);
+      const testBed = historyBed();
+      await testBed.dispatchHandled(initializeStoredSessionsStateSlice());
+      const state = testBed.getState().storedSessions;
+      expect(Object.keys(state.sessions)).toEqual([active.id]);
+      expect(state.activeSessionId).toBe(active.id);
+      expect(state.isReady).toBe(true);
+      expect(state.isHydrated).toBe(false);
+      expect(state.historyLoad.isLoading()).toBe(false);
+      expect(await db.select().from(sessionsSchema)).toHaveLength(2);
+    });
+
+    it('shares concurrent requests, preserves live edits, and reuses loaded history', async () => {
+      const active = Session.freeformSession(LocalDate.of(2026, 4, 11), undefined);
+      const completed = Session.freeformSession(LocalDate.of(2026, 4, 10), undefined);
+      await db.insert(sessionsSchema).values([
+        { id: active.id, active: true, payload: active.toJSON() },
+        { id: completed.id, payload: completed.toJSON() },
+      ]);
+      const testBed = historyBed();
+      const select = vi.spyOn(db, 'select');
+      const loading = testBed.dispatchHandled(loadStoredSessionHistory());
+      const edited = active.with({ date: LocalDate.of(2026, 4, 12) });
+      testBed.dispatch(putStoredSession(edited));
+      await Promise.all([loading, testBed.dispatchHandled(loadStoredSessionHistory())]);
+      await testBed.dispatchHandled(loadStoredSessionHistory());
+      expect(select).toHaveBeenCalledTimes(1);
+      const state = testBed.getState().storedSessions;
+      expect(Object.keys(state.sessions)).toHaveLength(2);
+      expect(state.sessions[active.id]).toBe(edited);
+      expect(state.isHydrated).toBe(true);
+      expect(state.historyLoad.isSuccess()).toBe(true);
+    });
+
+    it('keeps the history cache when a workout is stopped and another is started', async () => {
+      const completed = Session.freeformSession(LocalDate.of(2026, 4, 10), undefined);
+      await db.insert(sessionsSchema).values({ id: completed.id, payload: completed.toJSON() });
+      const testBed = historyBed();
+      const select = vi.spyOn(db, 'select');
+      await testBed.dispatchHandled(loadStoredSessionHistory());
+      const cached = testBed.getState().storedSessions.sessions[completed.id];
+
+      for (let day = 11; day <= 13; day++) {
+        const workout = Session.freeformSession(LocalDate.of(2026, 4, day), undefined);
+        testBed.dispatch(putStoredSession(workout));
+        testBed.dispatch(setActiveSessionId(workout.id));
+        await testBed.dispatchHandled(loadStoredSessionHistory());
+        await testBed.dispatchHandled(deleteStoredSession(workout.id));
+        expect(testBed.getState().storedSessions.isHydrated).toBe(true);
+        expect(testBed.getState().storedSessions.sessions[completed.id]).toBe(cached);
+      }
+      expect(select).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not resurrect a discarded workout from an in-flight snapshot', async () => {
+      const active = Session.freeformSession(LocalDate.of(2026, 4, 11), undefined);
+      await db.insert(sessionsSchema).values({ id: active.id, active: true, payload: active.toJSON() });
+      const snapshot = await db.select().from(sessionsSchema);
+      const testBed = historyBed();
+      testBed.dispatch(putStoredSession(active));
+      vi.spyOn(db, 'select').mockReturnValueOnce({ from: () => Promise.resolve(snapshot) } as never);
+      const loading = testBed.dispatchHandled(loadStoredSessionHistory());
+      await testBed.dispatchHandled(deleteStoredSession(active.id));
+      await loading;
+      expect(testBed.getState().storedSessions.sessions[active.id]).toBeUndefined();
+    });
+
+    it('keeps history incomplete after a failure and allows retry', async () => {
+      const testBed = historyBed();
+      vi.spyOn(db, 'select').mockImplementationOnce(() => {
+        throw new Error('read failed');
+      });
+      await testBed.dispatchHandled(loadStoredSessionHistory());
+      expect(testBed.getState().storedSessions.isHydrated).toBe(false);
+      expect(
+        testBed.getState().storedSessions.historyLoad.match({
+          loading: () => '',
+          success: () => '',
+          error: (error) => error,
+        }),
+      ).toBe('read failed');
+      await testBed.dispatchHandled(loadStoredSessionHistory());
+      expect(testBed.getState().storedSessions.isHydrated).toBe(true);
+    });
+  });
 
   describe('the active session in SQLite', () => {
     it('persists content without ever claiming the active flag', async () => {

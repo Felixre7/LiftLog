@@ -23,7 +23,7 @@ import { executeRemoteBackup } from '@/store/settings';
 import { LocalDate } from '@js-joda/core';
 import { T, useTranslate } from '@tolgee/react';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Profiler, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Card, Icon as PaperIcon, Text, Tooltip } from 'react-native-paper';
 import Button from '@/components/presentation/foundation/button';
@@ -32,13 +32,19 @@ import { WelcomeWizard } from '@/components/smart/welcome-wizard';
 import { WhatsNewBanner } from '@/components/smart/whats-new-banner';
 import { SharedSession } from '@/models/feed-models';
 import { useStartWorkoutWithConfirmation } from '@/hooks/useStartWorkoutWithConfirmation';
+import { logStartupRender, markStartup } from '@/utils/startup-diagnostics';
+import { RemoteData } from '@/models/remote';
+
+markStartup('workout screen module evaluated');
 
 function ListUpcomingWorkouts({
   upcoming,
   startSession,
+  preview = false,
 }: {
   upcoming: readonly Session[];
   startSession: (s: Session) => void;
+  preview?: boolean;
 }) {
   const plan = useAppSelector(selectActiveProgram);
   const { t } = useTranslate();
@@ -64,7 +70,10 @@ function ListUpcomingWorkouts({
   };
 
   return (
-    <View style={{ flex: 1, gap: spacing[2], paddingTop: spacing[4] }}>
+    <View
+      style={{ flex: 1, gap: spacing[2], paddingTop: spacing[4] }}
+      onLayout={() => markStartup('upcoming workouts laid out')}
+    >
       <WelcomeWizard />
       <WhatsNewBanner />
       {currentSession && (
@@ -115,7 +124,7 @@ function ListUpcomingWorkouts({
         renderItemContent={(session) => {
           return (
             <Card.Content>
-              <SessionCardContent session={session} />
+              <SessionCardContent session={session} showWeight={!preview} />
             </Card.Content>
           );
         }}
@@ -126,7 +135,7 @@ function ListUpcomingWorkouts({
           };
           return (
             <CardActions style={{ marginTop: spacing[2] }}>
-              <IconButton icon={'share'} mode="contained" onPress={() => handleSharePress(session)} />
+              {!preview && <IconButton icon={'share'} mode="contained" onPress={() => handleSharePress(session)} />}
               {sessionPlanIndex !== -1 ? (
                 <IconButton icon={'edit'} mode="contained" onPress={handleEditPress} />
               ) : undefined}
@@ -217,30 +226,59 @@ function NoUpcomingWorkouts() {
   );
 }
 
-function SessionCardContent({ session }: { session: Session }) {
+function SessionCardContent({ session, showWeight = true }: { session: Session; showWeight?: boolean }) {
   return (
     <SplitCardControl
       titleContent={<SessionSummaryTitle session={session} />}
-      mainContent={<SessionSummary session={session} isFilled={false} showWeight />}
+      mainContent={<SessionSummary session={session} isFilled={false} showWeight={showWeight} />}
     />
   );
 }
 
 export default function Index() {
   const upcomingSessions = useAppSelector((s) => s.program.upcomingSessions);
+  const progressionReady = upcomingSessions.isSuccess();
+  const activeSession = useAppSelector(selectActiveSession);
+  const plan = useAppSelector(selectActiveProgram);
+  const useImperialUnits = useAppSelector((s) => s.settings.useImperialUnits);
+  const [pendingStart, setPendingStart] = useState<Session>();
   const dispatch = useDispatch();
   const { t } = useTranslate();
   const currentBodyweight = upcomingSessions.map((x) => x.at(0)?.bodyweight).unwrapOr(undefined);
   const { start, confirmationDialog } = useStartWorkoutWithConfirmation();
 
+  const requestStart = (session: Session) => {
+    if (progressionReady || session.id === activeSession?.id) {
+      start(session);
+    } else {
+      setPendingStart(session);
+      dispatch(fetchUpcomingSessions());
+    }
+  };
+
+  useEffect(() => {
+    if (!pendingStart || !progressionReady || !upcomingSessions.isSuccess()) return;
+    const resolved = pendingStart.isFreeform
+      ? Session.freeformSession(pendingStart.date, currentBodyweight)
+      : upcomingSessions.unwrapOr([]).find((session) => session.blueprint === pendingStart.blueprint);
+    if (resolved) {
+      setPendingStart(undefined);
+      start(resolved);
+    }
+  }, [pendingStart, progressionReady, upcomingSessions, currentBodyweight, start]);
+
   useFocusEffect(() => {
+    markStartup('workout focus started');
     dispatch(fetchUpcomingSessions());
+    markStartup('workout focus requested upcoming sessions');
     dispatch(publishUnpublishedSessions());
+    markStartup('workout focus dispatched feed publish');
     dispatch(executeRemoteBackup({}));
+    markStartup('workout focus dispatched backup');
   });
 
   const createFreeformSession = () => {
-    start(Session.freeformSession(LocalDate.now(), currentBodyweight));
+    requestStart(Session.freeformSession(LocalDate.now(), currentBodyweight));
   };
 
   const floatingBottomContainer = (
@@ -254,6 +292,20 @@ export default function Index() {
     />
   );
 
+  if (pendingStart) {
+    return <Remote value={upcomingSessions} retry={() => dispatch(fetchUpcomingSessions())} success={() => null} />;
+  }
+
+  const displayedSessions =
+    progressionReady ||
+    upcomingSessions.match({ success: () => true, error: () => true, loading: () => false, notAsked: () => false })
+      ? upcomingSessions
+      : RemoteData.success(
+          plan.sessions.map((blueprint) =>
+            Session.getEmptySession(blueprint, useImperialUnits ? 'pounds' : 'kilograms'),
+          ),
+        );
+
   return (
     <FullHeightScrollView
       floatingChildren={floatingBottomContainer}
@@ -266,13 +318,18 @@ export default function Index() {
           headerBackVisible: false,
         }}
       />
-      <PlanMenu />
-      <Remote
-        value={upcomingSessions}
-        success={(upcoming) => {
-          return <ListUpcomingWorkouts startSession={start} upcoming={upcoming} />;
-        }}
-      />
+      <Profiler id="workout plan menu" onRender={logStartupRender}>
+        <PlanMenu />
+      </Profiler>
+      <Profiler id="workout list" onRender={logStartupRender}>
+        <Remote
+          value={displayedSessions}
+          retry={() => dispatch(fetchUpcomingSessions())}
+          success={(upcoming) => {
+            return <ListUpcomingWorkouts startSession={requestStart} upcoming={upcoming} preview={!progressionReady} />;
+          }}
+        />
+      </Profiler>
       {confirmationDialog}
     </FullHeightScrollView>
   );

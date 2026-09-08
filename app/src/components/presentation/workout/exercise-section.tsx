@@ -14,6 +14,7 @@ import IconButton from '@/components/presentation/foundation/icon-button';
 import { useRouter } from 'expo-router';
 import { getExerciseHistoryHref } from '@/components/smart/exercise-history';
 import { Updater } from '@/utils/types';
+import { markStartup } from '@/utils/startup-diagnostics';
 
 interface ExerciseSectionProps<T extends RecordedExercise> {
   recordedExercise: T;
@@ -38,6 +39,7 @@ export default function ExerciseSection<T extends RecordedExercise>(props: Exerc
   const [removeExerciseDialogOpen, setRemoveExerciseDialogOpen] = useState(false);
   const showStats = recordedExercise instanceof RecordedWeightedExercise;
   const showPrevious = () => {
+    markStartup('exercise history requested');
     push(getExerciseHistoryHref(recordedExercise.blueprint), { withAnchor: true });
   };
 

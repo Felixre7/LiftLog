@@ -43,7 +43,7 @@ export const backupDatabaseAsync: typeof expoBackupDatabaseAsync = async (opts) 
 
   // Collect all DDL (tables, indexes, triggers, views) in creation order
   const schemaResult = await src.execute(
-    `SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY rootpage`,
+    `SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 ELSE 2 END, rootpage`,
   );
 
   const stmts: string[] = [];
