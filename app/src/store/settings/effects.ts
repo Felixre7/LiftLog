@@ -77,27 +77,19 @@ export function applySettingsEffects(addEffect: AddEffectFn) {
       const proToken = await preferenceService.getProToken();
       dispatch(setProToken(proToken));
 
-      let purchasesConfigured = false;
       if (!__DEV__) {
-        const apiKey =
-          Platform.OS === 'ios'
-            ? process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY
-            : Platform.OS === 'android'
-              ? process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY
-              : undefined;
-        if (apiKey) {
-          try {
-            Purchases.configure({ apiKey });
-            purchasesConfigured = true;
-          } catch (error) {
-            logger.error('Failed to configure purchases; continuing local startup', error);
-          }
-        } else {
-          logger.info('Purchase configuration unavailable; continuing local startup');
+        if (Platform.OS === 'ios') {
+          Purchases.configure({
+            apiKey: process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY!,
+          });
+        } else if (Platform.OS === 'android') {
+          Purchases.configure({
+            apiKey: process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY!,
+          });
         }
       }
       // migrate pro token to a revenuecat
-      if (purchasesConfigured && proToken && !proToken.startsWith('$RCAnonymousID')) {
+      if (proToken && !proToken.startsWith('$RCAnonymousID')) {
         try {
           const customerInfo = await Purchases.getCustomerInfo();
           await Purchases.syncPurchases();
