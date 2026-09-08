@@ -4,7 +4,7 @@ import { Weight } from '@/models/weight';
 import { SessionBlueprint, WeightedExerciseBlueprint } from '@/models/blueprint-models';
 import { LocalDate, LocalTime, OffsetDateTime, ZoneOffset, Duration } from '@js-joda/core';
 import { LocalDateRange } from '@/models/time-models';
-import { calculateStats } from '@/store/stats/calculate-stats';
+import { calculateStats, calculateStatsAsync } from '@/store/stats/calculate-stats';
 import {
   emptyPotentialSet,
   filledPotentialSet,
@@ -473,4 +473,16 @@ describe('calculateStats', () => {
       expect(result.averageSessionLength.toMinutes()).toBe(44);
     });
   });
+});
+
+it('cooperative calculation preserves weighted and bodyweight results across checkpoints', async () => {
+  const date = LocalDate.of(2024, 7, 1);
+  const sessions = [makeSession(date, 'Squat', 100), makeSession(date.plusDays(1), 'Pullup', 10, 8, 3, 80, true)];
+  let checkpoints = 0;
+  const range = makeRange(date, date.plusDays(7));
+  const actual = await calculateStatsAsync(sessions, 'pounds', range, async () => {
+    checkpoints++;
+  });
+  expect(actual).toEqual(calculateStats(sessions, 'pounds', range));
+  expect(checkpoints).toBeGreaterThan(sessions.length);
 });

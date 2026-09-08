@@ -1,3 +1,6 @@
+import { SessionActivitySummary } from '@/models/session-summary';
+import { sessionVolume } from '@/store/activity/volume';
+import { Weight } from '@/models/weight';
 import { RecordedExercise, Session } from '@/models/session-models';
 import { MovementKey, ProgressionKey } from '@/models/blueprint-models';
 import { LocalDate, OffsetDateTime, YearMonth, ZoneId } from '@js-joda/core';
@@ -6,10 +9,18 @@ import { shallowEqual } from 'react-redux';
 import Enumerable from 'linq';
 import { TemporalComparer } from '@/models/comparers';
 import { ExerciseDescriptor } from '@/models/exercise-models';
-import { findPersonalRecords } from '@/store/stats/personal-records';
+import { bestOneRepMax, PersonalRecord } from '@/store/stats/personal-records';
+import { RemoteData } from '@/models/remote';
 
 interface StoredSessionState {
+  // Startup needs only the active workout and exercise catalogs. isHydrated means all history.
+  isReady: boolean;
+  dataRevision: number;
+  // Statistics exclude the active workout, so logging a set must not restart their warm-up.
+  historyRevision: number;
   isHydrated: boolean;
+  historyLoad: RemoteData<boolean>;
+  activitySummaries: SessionActivitySummary[] | undefined;
   sessions: Record<string, Session>;
   // The workout in progress. It lives in `sessions` like any other; this only says which one it is.
   activeSessionId: string | undefined;
@@ -25,7 +36,12 @@ interface StoredSessionState {
 }
 
 const initialState: StoredSessionState = {
+  isReady: false,
+  dataRevision: 0,
+  historyRevision: 0,
   isHydrated: false,
+  historyLoad: RemoteData.notAsked(),
+  activitySummaries: undefined,
   sessions: {},
   activeSessionId: undefined,
   latestExercises: {},
@@ -65,12 +81,30 @@ const storedSessionsSlice = createSlice({
   name: 'storedSessions',
   initialState,
   reducers: {
+    setActivitySummaries(state, action: PayloadAction<SessionActivitySummary[]>) {
+      state.activitySummaries = action.payload;
+    },
+    mergeLoadedSessions(state, action: PayloadAction<Session[]>) {
+      // Reads are not writes. In-memory edits remain authoritative while a query is in flight.
+      for (const session of action.payload) {
+        if (!state.sessions[session.id]) state.sessions[session.id] = session;
+      }
+    },
+    setIsReady(state, action: PayloadAction<boolean>) {
+      state.isReady = action.payload;
+    },
+    setHistoryLoad(state, action: PayloadAction<RemoteData<boolean>>) {
+      state.historyLoad = action.payload;
+    },
     setIsHydrated(state, action: PayloadAction<boolean>) {
       state.isHydrated = action.payload;
     },
     setStoredSessions(state, action: PayloadAction<Record<string, Session>>) {
+      state.dataRevision++;
+      state.historyRevision++;
       state.sessions = action.payload;
       state.latestExercises = {};
+      state.earliestSession = undefined;
       Object.values(action.payload).forEach((session) => {
         updateDerivatives(state, session);
       });
@@ -107,11 +141,16 @@ const storedSessionsSlice = createSlice({
 
     setActiveSessionId(state, action: PayloadAction<string | undefined>) {
       state.activeSessionId = action.payload;
+      state.dataRevision++;
+      state.historyRevision++;
     },
 
     deleteStoredSession(state, action: PayloadAction<string>) {
+      state.dataRevision++;
+      state.historyRevision++;
       const deletedSession = state.sessions[action.payload];
       delete state.sessions[action.payload];
+      state.activitySummaries = state.activitySummaries?.filter((session) => session.id !== action.payload);
       if (state.activeSessionId === action.payload) {
         state.activeSessionId = undefined;
       }
@@ -201,6 +240,8 @@ const storedSessionsSlice = createSlice({
 });
 
 function updateDerivatives(state: WritableDraft<StoredSessionState>, session: Session) {
+  state.dataRevision++;
+  if (session.id !== state.activeSessionId) state.historyRevision++;
   if (!state.earliestSession || state.earliestSession.date.isAfter(session.date)) {
     state.earliestSession = session;
   }
@@ -230,8 +271,13 @@ export const selectSessionsBy = createSelector(
 );
 
 export const initializeStoredSessionsStateSlice = createAction('initializeStoredSessionsStateSlice');
+export const loadStoredSessionHistory = createAction('loadStoredSessionHistory');
 
 export const {
+  setActivitySummaries,
+  mergeLoadedSessions,
+  setIsReady,
+  setHistoryLoad,
   setIsHydrated,
   setStoredSessions,
   upsertStoredSessions,
@@ -328,13 +374,43 @@ export const selectPreviousComparableSession = createSelector(
  * Records per session across the user's whole history. Unlike the feed, which only holds its 90-day retention
  * window, nothing here is truncated, so these are all-time bests.
  */
-export const selectHistoryPersonalRecords = createSelector([selectSessions], (sessions) =>
-  findPersonalRecords(
-    Enumerable.from(sessions)
-      .orderBy((x) => getSessionReferenceTime(x), TemporalComparer)
-      .toArray(),
-  ),
+export const selectSessionActivity = createSelector(
+  [
+    (state: { storedSessions: StoredSessionState }) => state.storedSessions.activitySummaries,
+    selectSessions,
+    selectActiveSessionId,
+  ],
+  (summaries, loaded, activeId): SessionActivitySummary[] => {
+    const all = new Map(summaries?.map((summary) => [summary.id, summary]));
+    for (const session of loaded)
+      all.set(session.id, {
+        id: session.id,
+        date: session.date,
+        isStarted: session.isStarted,
+        referenceTime: getSessionReferenceTime(session).toInstant().toEpochMilli(),
+        volume: sessionVolume(session),
+        bests: [...bestOneRepMax(session)].map(([key, best]) => ({ key, ...best })),
+      });
+    if (activeId) all.delete(activeId);
+    return [...all.values()];
+  },
 );
+
+export const selectHistoryPersonalRecords = createSelector([selectSessionActivity], (sessions) => {
+  const bests = new Map<MovementKey, Weight>();
+  const result = new Map<string, PersonalRecord[]>();
+  for (const session of [...sessions].sort((a, b) => a.referenceTime - b.referenceTime || a.id.localeCompare(b.id))) {
+    const records: PersonalRecord[] = [];
+    for (const candidate of session.bests) {
+      const previous = bests.get(candidate.key);
+      if (previous && candidate.oneRepMax.isGreaterThan(previous))
+        records.push({ exerciseName: candidate.exerciseName, oneRepMax: candidate.oneRepMax });
+      if (!previous || candidate.oneRepMax.isGreaterThan(previous)) bests.set(candidate.key, candidate.oneRepMax);
+    }
+    if (records.length) result.set(session.id, records);
+  }
+  return result;
+});
 
 export const selectSessionsInMonth = createSelector([selectSessions, (_, ym: YearMonth) => ym], (sessions, ym) =>
   Enumerable.from(sessions)

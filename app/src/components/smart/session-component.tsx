@@ -1,3 +1,5 @@
+import { useServices } from '@/components/smart/services-provider';
+import { MovementKey } from '@/models/blueprint-models';
 import { showSnackbar } from '@/store/app';
 import { Card, Icon, Text } from 'react-native-paper';
 import { useDispatch } from 'react-redux';
@@ -20,7 +22,7 @@ import WeightedExercise from '@/components/presentation/workout/weighted/weighte
 import WeightDisplay from '@/components/presentation/foundation/editors/weight-display';
 import BigNumber from 'bignumber.js';
 import RestTimer from '@/components/presentation/workout/rest-timer';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useEffectEvent, useState } from 'react';
 import FullHeightScrollView from '@/components/layout/full-height-scroll-view';
 import { getSessionExerciseEditorHref } from '@/components/smart/session-exercise-editor';
 import { LocalTime, OffsetDateTime, ZoneId } from '@js-joda/core';
@@ -61,7 +63,26 @@ export default function SessionComponent(props: {
   const dispatch = useDispatch();
   const isReadonly = !props.updateSession;
   const editableSessionId = isReadonly ? undefined : session.id;
-  const recentlyCompletedExercises = useAppSelectorWithArg(selectRecentlyCompletedExercises, session.id);
+  const fullHistory = useAppSelectorWithArg(selectRecentlyCompletedExercises, session.id);
+  const isHydrated = useAppSelector((state) => state.storedSessions.isHydrated);
+  const { sessionHistoryRepository, logger } = useServices();
+  const [context, setContext] = useState<Record<MovementKey, RecordedExercise[]>>({});
+  const contextKeys = session.recordedExercises.map((exercise) => exercise.progressionKey()).join('|');
+  const getBlueprints = useEffectEvent(() => session.recordedExercises.map((exercise) => exercise.blueprint));
+  useEffect(() => {
+    if (isHydrated) return;
+    let cancelled = false;
+    void sessionHistoryRepository
+      .getWorkoutContext(getBlueprints(), session.id)
+      .then((value) => {
+        if (!cancelled) setContext(value);
+      })
+      .catch((error: unknown) => logger.error('Failed to load previous workout values', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [contextKeys, session.id, isHydrated, sessionHistoryRepository, logger]);
+  const recentlyCompletedExercises = (key: MovementKey) => (isHydrated ? fullHistory(key) : (context[key] ?? []));
   const addExercise = useAddExercise(editableSessionId);
   const updateSession = (reducer: (session: Session) => Session) => props.updateSession?.(reducer);
   const resetTimer = (time: OffsetDateTime | undefined) => {

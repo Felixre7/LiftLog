@@ -50,7 +50,6 @@ export function applySettingsEffects(addEffect: AddEffectFn) {
   addEffect(
     initializeSettingsStateSlice,
     async (_, { cancelActiveListeners, dispatch, extra: { preferenceService, logger } }) => {
-      const start = performance.now();
       cancelActiveListeners();
 
       await hydrateGenericPreferences(preferenceService, dispatch);
@@ -102,8 +101,6 @@ export function applySettingsEffects(addEffect: AddEffectFn) {
       }
       dispatch(setIsHydrated(true));
       dispatch(initializeStoredSessionsStateSlice());
-      const end = performance.now();
-      logger.log(`initializeSettingsStateSlice effect took ${(end - start).toFixed(2)}ms`);
     },
   );
 

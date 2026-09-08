@@ -132,5 +132,6 @@ export const selectExerciseView = createSelector(
 );
 
 export const fetchOverallStats = createAction('fetchOverallStats');
+export const warmAllTimeStats = createAction('warmAllTimeStats');
 
 export const statsReducer = statsSlice.reducer;

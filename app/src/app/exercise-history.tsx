@@ -7,5 +7,5 @@ export default function ExerciseHistoryPage() {
     name: string;
     type: ExerciseBlueprint['type'];
   }>();
-  return <ExerciseHistory exerciseName={name} movementKey={movementKeyFor(name, type)} />;
+  return <ExerciseHistory key={`${type}:${name}`} exerciseName={name} movementKey={movementKeyFor(name, type)} />;
 }

@@ -114,8 +114,8 @@ export function addImportBackupEffects(addEffect: AddEffectFn) {
       });
 
       await migrator.migrate();
-      const workouts = (await drizzleBackupDb.select().from(sessionsSchema)).map((x) =>
-        Session.fromJSON(sessionMigrations.migrate(x.payload)),
+      const workouts = (await drizzleBackupDb.select({ payload: sessionsSchema.payload }).from(sessionsSchema)).map(
+        (x) => Session.fromJSON(sessionMigrations.migrate(x.payload)),
       );
       const programs = (await drizzleBackupDb.select().from(programsSchema)).reduce(
         toRecord(

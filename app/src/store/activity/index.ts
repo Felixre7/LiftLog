@@ -1,9 +1,10 @@
+import { SessionActivitySummary } from '@/models/session-summary';
 import { createSelector } from '@reduxjs/toolkit';
 import { LocalDate, YearMonth } from '@js-joda/core';
 import { Session } from '@/models/session-models';
 import { FEED_EVENT_RETENTION_DAYS, SessionUserEvent } from '@/models/feed-models';
 import { RootState } from '@/store/store';
-import { selectSessions } from '@/store/stored-sessions';
+import { selectSessionActivity } from '@/store/stored-sessions';
 import { ActivityCell, ActivityMarker, ActivityRow, VolumeScale } from '@/store/activity/activity-types';
 import { levelFor, sessionVolume, volumeScaleOf } from '@/store/activity/volume';
 import { calculateStreak } from '@/store/activity/streak';
@@ -44,7 +45,7 @@ function groupByDate<T>(items: T[], dateOf: (item: T) => LocalDate): Map<string,
   return byDate;
 }
 
-export const selectOwnSessionsByDate = createSelector([selectSessions], (sessions) =>
+export const selectOwnSessionsByDate = createSelector([selectSessionActivity], (sessions) =>
   groupByDate(
     sessions.filter((x) => x.isStarted),
     (x) => x.date,
@@ -61,11 +62,11 @@ export const selectFeedEventsByDate = createSelector([selectFeedEvents], (feed) 
 
 /** Per-user volume ranges, each normalised over that user's whole history rather than the visible month. */
 export const selectVolumeScales = createSelector(
-  [selectSessions, selectFeedEvents],
+  [selectSessionActivity, selectFeedEvents],
   (sessions, feed): Map<string, VolumeScale> => {
     const volumesByUser = new Map<string, number[]>();
 
-    const push = (userId: string, session: Session) => {
+    const push = (userId: string, session: Session | SessionActivitySummary) => {
       if (!session.isStarted) return;
       const volumes = volumesByUser.get(userId);
       if (volumes) {
@@ -111,7 +112,7 @@ export const selectFollowsOtherUsers = createSelector(
 );
 
 interface CellContext {
-  ownSessions: Map<string, Session[]>;
+  ownSessions: Map<string, SessionActivitySummary[]>;
   feedEvents: Map<string, SessionUserEvent[]>;
   scales: Map<string, VolumeScale>;
   names: Map<string, string | undefined>;
@@ -279,7 +280,7 @@ export const selectFollowingActivity = createSelector(
         const isOwn = userId === ownUserId;
         const scale = scales.get(isOwn ? OWN_USER_KEY : userId);
 
-        const sessionsOn = (date: LocalDate): Session[] =>
+        const sessionsOn = (date: LocalDate): (Session | SessionActivitySummary)[] =>
           isOwn
             ? (ownSessions.get(date.toString()) ?? [])
             : (feedEvents.get(date.toString()) ?? [])
@@ -325,7 +326,7 @@ export const selectFollowingActivity = createSelector(
 );
 
 export const selectStreakStats = createSelector(
-  [selectSessions, selectFirstDayOfWeek, (_: RootState, today: LocalDate) => today],
+  [selectSessionActivity, selectFirstDayOfWeek, (_: RootState, today: LocalDate) => today],
   (sessions, firstDayOfWeek, today) => calculateStreak(sessions, firstDayOfWeek, today),
 );
 

@@ -33,7 +33,10 @@ export interface StreakStats {
 }
 
 /** Distinct days trained per week. A two-a-day is one day, so it can't inflate the bar. */
-function countDistinctDaysByWeek(sessions: Session[], firstDayOfWeek: DayOfWeek): Map<string, Set<string>> {
+function countDistinctDaysByWeek(
+  sessions: Pick<Session, 'date' | 'isStarted'>[],
+  firstDayOfWeek: DayOfWeek,
+): Map<string, Set<string>> {
   const byWeek = new Map<string, Set<string>>();
 
   for (const session of sessions) {
@@ -66,7 +69,11 @@ function lowerMedian(ascending: number[]): number {
  * (ProgramBlueprint is just a rotation, with no days-per-week), so the bar comes from the user's own
  * trailing behaviour instead.
  */
-export function calculateStreak(sessions: Session[], firstDayOfWeek: DayOfWeek, today: LocalDate): StreakStats {
+export function calculateStreak(
+  sessions: Pick<Session, 'date' | 'isStarted'>[],
+  firstDayOfWeek: DayOfWeek,
+  today: LocalDate,
+): StreakStats {
   const daysByWeek = countDistinctDaysByWeek(sessions, firstDayOfWeek);
   const currentWeekStart = weekStart(today, firstDayOfWeek);
   const currentWeekCount = daysByWeek.get(currentWeekStart.toString())?.size ?? 0;

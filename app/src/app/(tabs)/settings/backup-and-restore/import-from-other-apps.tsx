@@ -1,3 +1,4 @@
+import { SessionHistoryGate } from '@/components/smart/session-history-gate';
 import { SettingsPage } from '@/components/layout/settings-page';
 import { EXTERNAL_IMPORT_FORMATS } from '@/services/csv-import';
 import { ExternalImportFormat, importFromExternal } from '@/store/settings';
@@ -9,7 +10,7 @@ import { SegmentedListSelect } from '@/components/presentation/foundation/segmen
 import { PageActions } from '@/components/presentation/foundation/page-actions';
 import ImportIcon from '@expo/material-symbols/download.xml';
 
-export default function ImportFromOtherAppsPage() {
+function ImportFromOtherAppsPageContent() {
   const { t } = useTranslate();
   const dispatch = useDispatch();
   const [format, setFormat] = useState<ExternalImportFormat>('FitNotes');
@@ -40,5 +41,13 @@ export default function ImportFromOtherAppsPage() {
         />
       </SegmentedGroup>
     </SettingsPage>
+  );
+}
+
+export default function ImportFromOtherAppsPage() {
+  return (
+    <SessionHistoryGate>
+      <ImportFromOtherAppsPageContent />
+    </SessionHistoryGate>
   );
 }

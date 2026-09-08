@@ -30,6 +30,7 @@ export class SessionService {
   async *getUpcomingSessions(
     sessionBlueprints: SessionBlueprint[],
     latestExercises: Record<ProgressionKey, RecordedExercise | undefined>,
+    latestStoredSession?: Session | null,
   ): AsyncIterableIterator<Session> {
     const currentState = this.getState();
     const currentSession = selectActiveSession(currentState);
@@ -41,7 +42,10 @@ export class SessionService {
     await yieldToEventLoop();
 
     let latestSession =
-      currentSession ?? this.progressRepository.getOrderedSessions().firstOrDefault((x) => !x.isFreeform);
+      currentSession ??
+      (latestStoredSession === undefined
+        ? this.progressRepository.getOrderedSessions().firstOrDefault((x) => !x.isFreeform)
+        : latestStoredSession);
 
     await yieldToEventLoop();
     // Track the plan position by index so progression walks the plan in order.

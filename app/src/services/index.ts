@@ -1,3 +1,4 @@
+import { SessionHistoryRepository } from '@/services/session-history-repository';
 import { AiChatServiceV2 } from '@/services/ai-chat-service-v2';
 import { EncryptionService } from '@/services/encryption-service';
 import { FeedApiService } from '@/services/feed-api';
@@ -55,6 +56,7 @@ export function createServices(store: Store<RootState>, db: ExpoSQLiteDatabase, 
   return {
     logger,
     keyValueStore,
+    sessionHistoryRepository: new SessionHistoryRepository(db),
     progressRepository,
     sessionService,
     notificationService,

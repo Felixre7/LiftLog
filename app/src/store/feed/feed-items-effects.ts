@@ -185,7 +185,7 @@ export function addFeedItemEffects(addEffect: AddEffectFn) {
 
   addEffect(
     publishUnpublishedSessions,
-    async (_, { dispatch, getState, extra: { db, feedApiService, encryptionService } }) => {
+    async (_, { dispatch, getState, extra: { db, feedApiService, encryptionService, sessionHistoryRepository } }) => {
       const state = getState();
       const identityRemote = state.feed.identity;
 
@@ -201,7 +201,9 @@ export function addFeedItemEffects(addEffect: AddEffectFn) {
       const unpublishedSessionIds = await db.select().from(feedUnpublishedSessionsSchema);
 
       for (const { sessionId } of unpublishedSessionIds) {
-        const session = selectSession(getState(), sessionId);
+        const session =
+          selectSession(getState(), sessionId) ??
+          (getState().storedSessions.isHydrated ? undefined : await sessionHistoryRepository.getSession(sessionId));
 
         let result;
         if (session) {

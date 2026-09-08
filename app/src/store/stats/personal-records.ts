@@ -8,7 +8,7 @@ export interface PersonalRecord {
   oneRepMax: Weight;
 }
 
-function bestOneRepMax(session: Session): Map<MovementKey, PersonalRecord> {
+export function bestOneRepMax(session: Session): Map<MovementKey, PersonalRecord> {
   const best = new Map<MovementKey, PersonalRecord>();
 
   for (const exercise of session.recordedExercises) {

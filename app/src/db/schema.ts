@@ -1,3 +1,4 @@
+import { SessionActivityJSON } from '@/models/session-summary';
 import {
   AnyVersionExerciseDescriptorJSON,
   AnyVersionFeedIdentityJSON,
@@ -13,7 +14,7 @@ import {
 } from '@/models/storage/versions/any';
 import { BackendFeature, BackendKind } from '@/models/backend';
 import { sql } from 'drizzle-orm';
-import { check, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { check, index, integer, real, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const sessionsSchema = sqliteTable(
   'session',
@@ -21,12 +22,50 @@ export const sessionsSchema = sqliteTable(
     id: text().primaryKey(),
     // The workout currently in progress, if any. At most one row may be active.
     active: integer({ mode: 'boolean' }).notNull().default(false),
+    date: text(),
+    referenceTime: real(),
+    workoutName: text(),
+    // Null means this row still needs the recoverable projection backfill.
+    searchVersion: integer(),
+    activity: text({ mode: 'json' }).$type<SessionActivityJSON>(),
     payload: text('payload', { mode: 'json' }).$type<AnyVersionSessionJSON>().notNull(),
   },
   (table) => [
+    index('session_date_index').on(table.date),
+    index('session_reference_time_index').on(sql`${table.referenceTime} DESC`, table.id),
+    index('session_workout_name_index').on(table.workoutName, table.referenceTime),
+    index('session_search_version_index').on(table.searchVersion),
     uniqueIndex('single_active_session')
       .on(table.active)
       .where(sql`${table.active} = 1`),
+  ],
+);
+
+export const recordedExerciseIndexSchema = sqliteTable(
+  'recorded_exercise_index',
+  {
+    sessionId: text()
+      .notNull()
+      .references(() => sessionsSchema.id, { onDelete: 'cascade' }),
+    exerciseIndex: integer().notNull(),
+    movementKey: text().notNull(),
+    progressionKey: text().notNull(),
+    latestTime: real().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.sessionId, table.exerciseIndex] }),
+    index('exercise_progression_time_index').on(
+      table.progressionKey,
+      sql`${table.latestTime} DESC`,
+      table.sessionId,
+      table.exerciseIndex,
+    ),
+    index('exercise_movement_time_index').on(
+      table.movementKey,
+      sql`${table.latestTime} DESC`,
+      table.sessionId,
+      table.exerciseIndex,
+    ),
   ],
 );
 

@@ -19,7 +19,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       getLoadMessage(s.app, 'app settings') ||
       getLoadMessage(s.program, 'program') ||
       getLoadMessage(s.settings, 'settings') ||
-      getLoadMessage(s.storedSessions, 'stored sessions') ||
+      getLoadMessage({ isHydrated: s.storedSessions.isReady }, 'current workout and exercises') ||
       getLoadMessage(s.aiPlanner, 'ai planner'),
   );
   const { colors } = useAppTheme();

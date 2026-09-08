@@ -12,19 +12,25 @@ import { formatDuration } from '@/utils/format-duration';
 import { localeFormatBigNumber } from '@/utils/locale-bignumber';
 import { T, useTranslate } from '@tolgee/react';
 import { LegendList } from '@legendapp/list';
+import { ReactNode } from 'react';
 import { StyleProp, View, ViewStyle } from 'react-native';
 import { Divider } from 'react-native-paper';
 import { match, P } from 'ts-pattern';
 
 export function ExerciseHistoryList(props: {
   exercises: RecordedExercise[];
+  onEndReached?: () => void;
+  footer?: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
 }) {
   return (
     <LegendList
       testID="exercise-history-list"
       data={props.exercises}
-      keyExtractor={(exercise, index) => exercise.latestTime?.toString() ?? index.toString()}
+      onEndReached={props.onEndReached}
+      onEndReachedThreshold={0.5}
+      ListFooterComponent={<>{props.footer}</>}
+      keyExtractor={(exercise, index) => `${exercise.latestTime?.toString()}:${index}`}
       contentContainerStyle={props.contentContainerStyle}
       renderItem={({ item }) => <ExerciseHistoryEntry exercise={item} />}
       ItemSeparatorComponent={() => <Divider style={{ marginVertical: spacing[4] }} />}

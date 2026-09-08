@@ -12,6 +12,7 @@ import { applySettingsEffects } from '@/store/settings/effects';
 import { applyStoredSessionsEffects } from '@/store/stored-sessions/effects';
 import { applyFeedEffects } from '@/store/feed/effects';
 import { applyStatsEffects } from '@/store/stats/effects';
+import { warmAllTimeStats } from '@/store/stats';
 import { applyAiPlannerEffects } from '@/store/ai-planner/effects';
 import { applyBackendsEffects } from '@/store/backends/effects';
 import { clearAllListeners, Store } from '@reduxjs/toolkit';
@@ -35,6 +36,16 @@ export function resolveStore(db: ExpoSQLiteDatabase, expoDb: SQLiteDatabase) {
   applyAiPlannerEffects(addEffect);
   applyBackendsEffects(addEffect);
 
+  const slices = ['app', 'program', 'settings', 'storedSessions', 'aiPlanner'] as const;
+  const unsubscribe = store.subscribe(() => {
+    const state = store.getState();
+    if (
+      slices.every((slice) => (slice === 'storedSessions' ? state.storedSessions.isReady : state[slice].isHydrated))
+    ) {
+      unsubscribe();
+      store.dispatch(warmAllTimeStats());
+    }
+  });
   store.dispatch(initializeAppStateSlice());
   return { store, services };
 }

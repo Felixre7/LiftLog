@@ -4,7 +4,7 @@ import { registerDateTranslations } from '@/utils/date-locale';
 import { TolgeeProvider } from '@tolgee/react';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseAsync, SQLiteDatabase } from 'expo-sqlite';
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 
 // Create context for services
@@ -12,7 +12,10 @@ const ServicesContext = createContext<Services | null>(null);
 
 let databasePromise: Promise<SQLiteDatabase> | undefined;
 function openDatabase() {
-  return (databasePromise ??= openDatabaseAsync('db.db'));
+  if (!databasePromise) {
+    databasePromise = openDatabaseAsync('db.db');
+  }
+  return databasePromise;
 }
 
 export default function ServicesProvider(props: { children: ReactNode }) {
@@ -20,23 +23,22 @@ export default function ServicesProvider(props: { children: ReactNode }) {
   useEffect(() => {
     void openDatabase().then(setOpDb);
   }, [setOpDb]);
-  const db = useMemo(() => expoDb && drizzle(expoDb), [expoDb]);
-  const resolved = useMemo(() => (db && expoDb ? resolveStore(db, expoDb) : undefined), [db, expoDb]);
-  const store = resolved?.store;
-  const services = resolved?.services;
+  return expoDb ? <ResolvedServicesProvider expoDb={expoDb}>{props.children}</ResolvedServicesProvider> : null;
+}
+
+function ResolvedServicesProvider({ expoDb, children }: { expoDb: SQLiteDatabase; children: ReactNode }) {
+  // The store owns loaded history and active edits. React may discard memo caches (including during
+  // Fast Refresh), so its lifetime must be component state rather than a useMemo calculation.
+  const [{ store, services }] = useState(() => resolveStore(drizzle(expoDb), expoDb));
   useEffect(() => {
     if (services) {
       registerDateTranslations(services.tolgee);
     }
   }, [services]);
-  if (!store || !services) {
-    return <></>;
-  }
-
   return (
     <Provider store={store}>
       <ServicesContext.Provider value={services}>
-        <TolgeeProvider tolgee={services.tolgee}>{props.children}</TolgeeProvider>
+        <TolgeeProvider tolgee={services.tolgee}>{children}</TolgeeProvider>
       </ServicesContext.Provider>
     </Provider>
   );

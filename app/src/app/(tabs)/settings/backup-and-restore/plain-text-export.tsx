@@ -1,3 +1,4 @@
+import { SessionHistoryGate } from '@/components/smart/session-history-gate';
 import { SettingsPage } from '@/components/layout/settings-page';
 import { exportPlainText, PlaintextExportFormat } from '@/store/settings';
 import { useTranslate } from '@tolgee/react';
@@ -8,7 +9,7 @@ import { SegmentedListSelect } from '@/components/presentation/foundation/segmen
 import { PageActions } from '@/components/presentation/foundation/page-actions';
 import ExportIcon from '@expo/material-symbols/file_export.xml';
 
-export default function PlainTextExportPage() {
+function PlainTextExportPageContent() {
   const { t } = useTranslate();
   const dispatch = useDispatch();
   const [format, setFormat] = useState<PlaintextExportFormat>('CSV');
@@ -42,5 +43,13 @@ export default function PlainTextExportPage() {
         />
       </SegmentedGroup>
     </SettingsPage>
+  );
+}
+
+export default function PlainTextExportPage() {
+  return (
+    <SessionHistoryGate>
+      <PlainTextExportPageContent />
+    </SessionHistoryGate>
   );
 }
