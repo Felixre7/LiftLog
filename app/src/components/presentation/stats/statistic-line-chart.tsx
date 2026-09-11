@@ -8,6 +8,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { lineGraphProps } from '@/components/presentation/stats/line-graph-props';
 import { useFormatDate } from '@/hooks/useFormatDate';
 import { Text } from 'react-native-paper';
+import { chartDateLabels } from '@/components/presentation/stats/chart-date-labels';
 
 export function StatisticLineChart<T>({
   statistics: { statistics, maxValue, minValue },
@@ -55,7 +56,12 @@ export function StatisticLineChart<T>({
       setZoom(Math.min(1, Math.max(minimumZoom, pinchStartZoom.current * event.scale)));
     });
   const pointSpacing = maximumSpacing * currentZoom;
-  const labelInterval = Math.max(1, Math.ceil(50 / pointSpacing));
+  const dateLabels = chartDateLabels(
+    statistics.map((stat) => stat.dateTime.toLocalDate()),
+    pinchZoomEnabled ? pointSpacing : maximumSpacing,
+    pinchZoomEnabled && currentZoom < 1,
+    formatDate,
+  );
   // On android the area chart renders poorly unless it is delayed until after initial render
   const [areaChart, setAreaChart] = useState(false);
   useEffect(() => {
@@ -78,7 +84,22 @@ export function StatisticLineChart<T>({
             {
               data: points.map((point, index) => ({
                 ...point,
-                label: index % labelInterval === 0 ? point.label : undefined,
+                label: pinchZoomEnabled ? dateLabels[index] : point.label,
+                labelComponent: pinchZoomEnabled
+                  ? () => (
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          width: 50,
+                          marginLeft: (pointSpacing - 50) / 2,
+                          textAlign: 'center',
+                          color: colors.onSurface,
+                        }}
+                      >
+                        {dateLabels[index]}
+                      </Text>
+                    )
+                  : undefined,
               })),
               strokeDashArray: [1],
               dataPointsColor: colors.primary,
