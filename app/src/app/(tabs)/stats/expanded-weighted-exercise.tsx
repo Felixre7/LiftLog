@@ -67,18 +67,18 @@ function LoadedStatsFilled({ stats }: { stats: WeightedExerciseStatistics }) {
       <OverallStatsGrid stats={stats} />
       {stats.primary === 'reps' ? (
         <StatCardWithTitle title={t('stats.exercise.max_reps.title')}>
-          <StatisticLineChart statistics={stats.series.reps} axis={repsAxis} />
+          <StatisticLineChart pinchZoomEnabled statistics={stats.series.reps} axis={repsAxis} />
         </StatCardWithTitle>
       ) : (
         <StatCardWithTitle title={t('stats.exercise.max_weight.title')}>
-          <StatisticLineChart statistics={stats.series.load} axis={loadAxis} />
+          <StatisticLineChart pinchZoomEnabled statistics={stats.series.load} axis={loadAxis} />
         </StatCardWithTitle>
       )}
       {/* 1RM and volume both need a load and a rep count, so a reps-only exercise has neither. */}
       {stats.primary === 'load' && (
         <>
           <StatCardWithTitle title={t('stats.exercise.1rm_progress.title')}>
-            <StatisticLineChart statistics={stats.max1RMPerSessionStatistics} axis={loadAxis} />
+            <StatisticLineChart pinchZoomEnabled statistics={stats.max1RMPerSessionStatistics} axis={loadAxis} />
           </StatCardWithTitle>
           <StatCardWithTitle title={t('stats.exercise.volume_per_workout.title')}>
             <StatisticBarChart statistics={stats.totalVolumeStatistics} axis={loadAxis} />
